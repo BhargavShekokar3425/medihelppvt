@@ -1,0 +1,6 @@
+Karega Kya Bhai Tu?
+    1. SOS button dabaya
+    2. Bande ki location access kari
+    3. Jo bhi nearest hospitals hai unko ek alert message jayega -> SMS + email
+    4. Jo hospital pehle react karega uska message aa jayega user ko -> SMS + email
+
