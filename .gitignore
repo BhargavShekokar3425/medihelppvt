@@ -1,1 +1,5 @@
 .env
+# Ignore Firebase credentials and environment files  
+config/sosFirebaseCredentials.json  
+config/sosFirebasePvtKey.env  
+.env  
