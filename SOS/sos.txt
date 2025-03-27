@@ -4,3 +4,35 @@ Karega Kya Bhai Tu?
     3. Jo bhi nearest hospitals hai unko ek alert message jayega -> SMS + email
     4. Jo hospital pehle react karega uska message aa jayega user ko -> SMS + email
 
+Kese Hoga?
+    1. SOS button press kiya
+    2. browser ne location access kari
+    3. Geolocation API ne location fetch kari
+    4. POST request sent to backend (location, timestamp)
+    5. Backend ne nearby hospitals find kare using Geolocation API 
+    6. Hospitals ki list aayi
+    7. SOS alert message jayega -> SMS(twilio API) + email(nodemailer)
+    8. alert status firebase me save ho jayega
+    9. Hospitals ko message receive hua -> with location and timestamp and plus unko respond karna hai toh link bhi milega if they want to respond then usko click kar denge link pe
+    10. Ab hospital ne response link click kar diya hai -> firebase me responder update ho jayega -> sos request will be updated to resolved -> notification via SMS + email
+
+
+Summary (Firebase Integrated)
+1️⃣ User clicks SOS button → Gets location
+2️⃣ Frontend sends location to backend
+3️⃣ Backend stores SOS request in Firebase
+4️⃣ Backend finds hospitals & sends alerts (SMS + email)
+5️⃣ Hospitals receive & respond to the alert
+6️⃣ First hospital's response is recorded in Firebase
+7️⃣ User is notified about the responding hospital
+
+Firebase Admin SDK - Node.js ->
+"var admin = require("firebase-admin");
+
+var serviceAccount = require("path/to/serviceAccountKey.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});"
+
+
