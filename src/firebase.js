@@ -1,13 +1,13 @@
-require("dotenv").config();  // Load environment variables
 const admin = require("firebase-admin");
+const dotenv = require("dotenv");
+const path = require("path");
 
-// Parse the JSON string stored in the environment variable
-const serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+dotenv.config(); // Load environment variables
 
-// Initialize Firebase Admin SDK
+const serviceAccount = require(path.resolve(process.env.GOOGLE_APPLICATION_CREDENTIALS));
+
 admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+    credential: admin.credential.cert(serviceAccount)
 });
 
-const db = admin.firestore();
-module.exports = db;
+console.log("🔥 Firebase Connected Successfully!");
