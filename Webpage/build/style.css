@@ -1,0 +1,258 @@
+
+/* stylelint-disable selector-list-comma-newline-after */
+.gradient-background {
+    /* background: linear-gradient(300deg, #00bfff, #ff4c68, #ef8172); */
+    background: linear-gradient(300deg,#5aa3e7, #d73434, white);
+    background-size: 180% 180%;
+    animation: gradient-animation 18s ease infinite;
+  }
+  .gradient-bg {
+    /* background: linear-gradient(300deg, #00bfff, #ff4c68, #ef8172); */
+    background: linear-gradient(300deg, #d73434,#5aa3e7, rgb(158, 144, 144));
+    background-size: 180% 180%;
+    animation: gradient-animation 18s ease infinite;
+  }
+  
+  @keyframes gradient-animation {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  .star-rating {
+    direction: rtl;
+    display: inline-flex;
+    font-size: 2rem;
+}
+.star-rating input {
+    display: none;
+}
+.star-rating label {
+    cursor: pointer;
+    color: #ddd;
+}
+.star-rating input:checked ~ label,
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+    color: gold;
+}
+.review-card {
+    background: #fff;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+  .hover-card {
+position: relative; /* Positioning for child elements */
+overflow: hidden; /* Ensures any hidden content stays hidden */
+transition: transform 0.3s ease-in-out; /* Smooth card animation */
+}
+
+    .hover-card:hover {
+      transform: translateY(-1.8rem); /* Card moves upward on hover */
+    }
+  
+    /* Styling the "View More" container */
+    .hover-card .view-more {
+      position: absolute; /* Absolute positioning to center it */
+      bottom: 5%; /* Distance from the bottom */
+      right:25%; /* Center horizontally */
+      transform: translate(-50%, 100%); /* Initially positioned below the card */
+      opacity: 0; /* Hidden by default */
+      background-color: rgba(255, 255, 255, 0.8); /* White with some transparency */
+      color: black; /* Text color */
+      padding: 10px 10px;
+      /* Padding for the rectangular box */
+      border: 1px solid black; /* Box border */
+      border-radius: 4px; /* Rounded corners */
+      font-weight: bold; /* Bold text */
+      text-align: center; /* Center text */
+      text-decoration: none; /* Remove underline for links */
+      transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; /* Smooth appearance */
+    }
+  
+    .hover-card:hover .view-more {
+      transform: translate(-50%, 0); /* Bring into view */
+      opacity: 1; /* Fully visible */
+    }
+  .bd-placeholder-img {
+    font-size: 1.125rem;
+    text-anchor: middle;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  @media (min-width: 768px) {
+    .bd-placeholder-img-lg {
+      font-size: 3.5rem;
+    }
+  }
+  .hospital li {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    font-weight: normal;
+    transition: transform 0.3s ease-in-out, font-weight 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+/* Hover Effect */
+  .hospital li:hover {
+      transform: translateY(-5px); /* Moves the item up slightly */
+      font-weight: bold; /* Makes text bolder */
+  }
+
+  /* Ensure only the anchor turns blue on hover */
+  .hospital li a {
+      text-decoration: none;
+      color: #007bff;
+      transition: color 0.3s ease-in-out;
+  }
+
+  .hospital li:hover a {
+      color: #007bff; /* Changes only the link color on hover */
+  }
+
+  .custom-card {
+      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  }
+
+  .custom-card:hover {
+      transform: scale(1.05); /* Slightly enlarge the card */
+      box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.2); /* Add a soft shadow */
+  }
+  a {
+      text-decoration: none;
+  }
+  
+  .one-line {
+      white-space: nowrap;
+  }
+  .blog-header {
+      line-height: 1;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .spl_text{
+      font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+      font-size: larger;
+      font-weight: bolder;
+    }
+    .blog-header-logo {
+      font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+      font-size: 2.25rem;
+    }
+    
+    .blog-header-logo:hover {
+      text-decoration: none;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+      font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+    }
+    
+    .display-4 {
+      font-size: 2.5rem;
+    }
+    @media (min-width: 768px) {
+      .display-4 {
+        font-size: 3rem;
+      }
+    }
+    
+    .nav-scroller {
+      position: relative;
+      z-index: 2;
+      height: 5rem;
+      overflow-y: hidden;
+    }
+    
+    .nav-scroller .nav {
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-wrap: nowrap;
+      flex-wrap: nowrap;
+      padding-bottom: 1rem;
+      margin-top: -1px;
+      overflow-x: auto;
+      text-align: center;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .nav-scroller .nav-link {
+      padding-top: .75rem;
+      padding-bottom: .75rem;
+      font-size: .875rem;
+    }
+    
+    .card-img-right {
+      height: 100%;
+      border-radius: 0 3px 3px 0;
+    }
+    
+    .flex-auto {
+      -ms-flex: 0 0 auto;
+      flex: 0 0 auto;
+    }
+    
+    .h-250 { height: 250px; }
+    @media (min-width: 768px) {
+      .h-md-250 { height: 250px; }
+    }
+    
+    /* Pagination */
+    .blog-pagination {
+      margin-bottom: 4rem;
+    }
+    .blog-pagination > .btn {
+      border-radius: 2rem;
+    }
+    
+    /*
+     * Blog posts
+     */
+    .blog-post {
+      margin-bottom: 4rem;
+    }
+    .blog-post-title {
+      margin-bottom: .25rem;
+      font-size: 2.5rem;
+    }
+    .blog-post-meta {
+      margin-bottom: 1.25rem;
+      color: #999;
+    }
+    
+    /*
+     * Footer
+     */
+    .blog-footer {
+      padding: 2.5rem 0;
+      color: #999;
+      text-align: center;
+      background-color: #f9f9f9;
+      border-top: .05rem solid #e5e5e5;
+    }
+    .blog-footer p:last-child {
+      margin-bottom: 0;
+    }
+    
+    .nav a {
+      text-decoration: none;
+      color: #6c757d; /* Muted text color */
+      transition: transform 0.3s ease, color 0.3s ease;
+  }
+  
+  .nav a:hover {
+      transform: scale(1.1); /* Makes the link slightly larger */
+      color: #007bff; /* Changes text color on hover */
+      font-weight: bolder;
+  }
+   
