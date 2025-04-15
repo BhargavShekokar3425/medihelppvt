@@ -36,3 +36,23 @@
     transform: rotate(360deg);
   }
 }
+
+.user-icon-wrapper {
+  cursor: pointer;
+  display: inline-block;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.user-icon-wrapper:hover {
+  transform: translateY(-3px); /* Lift effect */
+}
+
+.user-icon-svg:hover {
+  filter: brightness(0.7); /* Darken or tint on hover */
+  fill: #007bff; /* Optional: color fill if using fillable icons */
+}
+
+.user-icon-wrapper:active {
+  transform: translateY(0px) scale(0.97); /* Slight scale for click effect */
+}
+
