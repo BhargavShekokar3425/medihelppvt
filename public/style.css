@@ -1,4 +1,3 @@
-
 /* stylelint-disable selector-list-comma-newline-after */
 .gradient-background {
     /* background: linear-gradient(300deg, #00bfff, #ff4c68, #ef8172); */
@@ -255,4 +254,517 @@ transition: transform 0.3s ease-in-out; /* Smooth card animation */
       color: #007bff; /* Changes text color on hover */
       font-weight: bolder;
   }
-   
+
+/* Chat page styles */
+.gradient-bg {
+  background: linear-gradient(to right, #5aa3e7, #d73434);
+  color: white;
+}
+
+.chat-container {
+  display: flex;
+  height: 500px;
+  margin-bottom: 20px;
+}
+
+.contacts-container {
+  width: 30%;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
+}
+
+.chat-messages {
+  width: 70%;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+  background-color: #f5f5f5;
+}
+
+.message-input {
+  padding: 10px;
+  border-top: 1px solid #ddd;
+  background-color: white;
+}
+
+.message-bubble {
+  max-width: 80%;
+  padding: 10px 15px;
+  margin: 5px 0;
+  border-radius: 18px;
+  position: relative;
+}
+
+.user-message {
+  background-color: #007bff;
+  color: white;
+  margin-left: auto;
+  border-bottom-right-radius: 5px;
+}
+
+.other-message {
+  background-color: #e9e9e9;
+  color: black;
+  margin-right: auto;
+  border-bottom-left-radius: 5px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.contact-item:hover {
+  background-color: #f5f5f5;
+}
+
+.contact-item.active {
+  background-color: #e3f2fd;
+}
+
+.contact-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+  background-color: #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.timestamp {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 5px;
+}
+
+/* User type selector buttons */
+.user-type-selector {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+.user-type-btn {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  border: 1px solid #ddd;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.user-type-btn.active {
+  background: linear-gradient(to right, #5aa3e7, #d73434);
+  color: white;
+  border-color: transparent;
+}
+
+.user-type-btn:first-child {
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+
+.user-type-btn:last-child {
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+/* DocAnswers Chat Page Styles */
+.chat-page {
+  position: relative;
+}
+
+/* Animation classes to replace framer-motion */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-50px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(50px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.5s ease forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.animate-fade-in-delay {
+  animation: fadeIn 0.5s ease forwards;
+  animation-delay: 0.3s;
+  opacity: 0;
+}
+
+/* Message animation */
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message-row {
+  animation: messageIn 0.3s ease forwards;
+}
+
+/* Contact card hover effect */
+.contact-card {
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.contact-card:hover {
+  transform: scale(1.02);
+  background-color: #f8f9fb;
+}
+
+.user-type-selector {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.user-type-option {
+  flex: 1;
+  border-radius: 12px;
+  padding: 15px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid #e9ecef;
+  background: white;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.user-type-option:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.user-type-option.selected {
+  background: linear-gradient(135deg, #5aa3e7, #d73434);
+  border-color: transparent;
+  color: white;
+}
+
+.icon-container {
+  font-size: 24px;
+  height: 48px;
+  width: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  background: #f8f9fa;
+  transition: all 0.3s ease;
+}
+
+.user-type-option.selected .icon-container {
+  background: rgba(255,255,255,0.2);
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #5aa3e7, #d73434);
+  color: white;
+}
+
+.contact-card {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #edf2f7;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.contact-card:hover {
+  background-color: #f8f9fb;
+  transform: translateX(5px);
+}
+
+.contact-card.active {
+  background-color: #edf2f7;
+  border-left: 4px solid #5aa3e7;
+}
+
+.contact-avatar {
+  margin-right: 15px;
+  position: relative;
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  border: 2px solid white;
+}
+
+.status-text {
+  font-size: 0.75rem;
+}
+
+.contact-info {
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.contact-detail {
+  font-style: italic;
+  max-width: 100%;
+  color: #718096;
+}
+
+.unread-indicator {
+  margin-left: 10px;
+}
+
+.chat-window {
+  display: flex;
+  flex-direction: column;
+  height: 700px; /* Increased from 550px */
+}
+
+.chat-header {
+  padding: 15px;
+  border-bottom: 1px solid #edf2f7;
+  background-color: white;
+}
+
+.chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background-color: #f8f9fb;
+}
+
+.message-row {
+  display: flex;
+  margin-bottom: 20px;
+  animation: messageIn 0.3s ease forwards;
+}
+
+.own-message {
+  justify-content: flex-end;
+}
+
+.other-message {
+  justify-content: flex-start;
+}
+
+.message-content {
+  max-width: 70%;
+}
+
+.message-bubble {
+  padding: 12px 15px;
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.own-message .message-bubble {
+  background: linear-gradient(135deg, #5aa3e7, #6ea8e7);
+  color: white;
+  border-bottom-right-radius: 5px;
+}
+
+.other-message .message-bubble {
+  background-color: white;
+  border-bottom-left-radius: 5px;
+}
+
+/* Add a more prominent indicator for user's own messages */
+.own-message .message-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  right: 15px;
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid #6ea8e7;
+}
+
+.message-text {
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+
+.message-meta {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  text-align: right;
+}
+
+.chat-input {
+  border-top: 1px solid #edf2f7;
+  background-color: white;
+}
+
+.contacts-scroll {
+  max-height: 650px !important; /* Increased from 500px */
+}
+
+.contacts-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.contacts-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.contacts-scroll::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.contacts-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.feature-card {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5aa3e7, #d73434);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+  margin-bottom: 15px;
+}
+
+.profile-avatar {
+  border: 5px solid white;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.profile-item i {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #5aa3e7, #d73434);
+  color: white;
+  border-radius: 50%;
+  font-size: 14px;
+}
+
+/* Add animation for message typing indicator */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 15px;
+  background: white;
+  border-radius: 18px;
+  width: fit-content;
+  margin: 10px 0;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #b0b0b0;
+  animation: typing-dot 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing-dot {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Media Queries */
+@media (max-width: 767px) {
+  .user-type-selector {
+    flex-direction: column;
+  }
+  
+  .profile-details {
+    margin-top: 20px;
+  }
+}
+
+/* Improve readability on very small screens */
+@media (max-width: 576px) {
+  .message-content {
+    max-width: 85%;
+  }
+}
