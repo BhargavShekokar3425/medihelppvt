@@ -33,6 +33,10 @@ const NavBar = () => {
           <img src="/assets/popular-hc.png" width="47" alt="Reviews" className="nav-icon"/>
           <div>Reviews</div> 
         </Link>
+        <Link className="p-2 text-dark spl_text" style={{ fontWeight: "bolder" }} to="/forums">
+          <img src="/assets/community-forums.png" width="47" alt="Community Forums" className="nav-icon"/>
+          <div>Community Forums</div> 
+        </Link>
       </nav>
     </div>
   );
