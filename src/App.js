@@ -8,6 +8,7 @@ import PrescDoc from "./pages/PresDoctors";
 import PrescPatient from "./pages/PresPatients";
 import Doctors from "./pages/Doctors";
 import SignUp from "./pages/SignUp";
+import DocAnswers from "./pages/DocAnswers"; // Add import for DocAnswers
 
 import NavBar from "./components/NavBar"; 
 import Header from "./components/Header"; 
@@ -27,15 +28,15 @@ function App() {
         <Route path="/doctors" element={<Doctors />} />
         <Route path="/sos" element={<h1>SOS Page</h1>} />
         <Route path="/appointments" element={<h1>Appointments Page</h1>} />
-        <Route path="/docanswers" element={<h1>DocAnswers Page</h1>} />
+        <Route path="/docanswers" element={<DocAnswers />} />
         <Route path="/prescription-hub" element={<PrescriptionMain />} />
         <Route path="/reviews" element={<Reviews />} />
         <Route path="/pres-doctor" element={<PrescDoc />} />
         <Route path="/pres-patient" element={<PrescPatient />} />
 
-  {/* existing routes */}
-  <Route path="/profile" element={<UserProfile />} />
-  <Route path="/signup" element={<SignUp />} />
+        {/* existing routes */}
+        <Route path="/profile" element={<UserProfile />} />
+        <Route path="/signup" element={<SignUp />} />
 
       </Routes>
       <Footer/>
