@@ -1,210 +1,382 @@
-/**
- * Mock Chat Service
- * This simulates a backend service for chat functionality
- */
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  getDocs, 
+  doc, 
+  getDoc,
+  updateDoc,
+  orderBy,
+  serverTimestamp,
+  onSnapshot,
+  arrayUnion,
+  limit,
+  setDoc
+} from "firebase/firestore";
+import { db } from "../firebase/config";
 
-// In-memory storage for conversations
-const conversationsStore = {
-  patient: {
-    1: [
-      { id: 1, sender: "doctor", text: "Hello! How can I help you today?", timestamp: "2023-06-15 14:30", read: true },
-      { id: 2, sender: "patient", text: "I've been experiencing headaches for the past week.", timestamp: "2023-06-15 14:32", read: true },
-      { id: 3, sender: "doctor", text: "I see. How severe are these headaches on a scale of 1-10?", timestamp: "2023-06-15 14:34", read: true },
-      { id: 4, sender: "patient", text: "Around 6-7. They're particularly bad in the morning.", timestamp: "2023-06-15 14:36", read: true },
-    ],
-    2: [
-      { id: 5, sender: "doctor", text: "Have you taken your prescribed medications?", timestamp: "2023-06-14 10:15", read: true },
-      { id: 6, sender: "patient", text: "Yes, but I'm still experiencing some side effects.", timestamp: "2023-06-14 10:20", read: true },
-      { id: 7, sender: "doctor", text: "What kind of side effects are you experiencing?", timestamp: "2023-06-14 10:22", read: true },
-      { id: 8, sender: "patient", text: "I've been feeling nauseous after taking the evening dose.", timestamp: "2023-06-14 10:25", read: true },
-    ],
-    3: [
-      { id: 9, sender: "pharmacy", text: "Your prescription is ready for pickup.", timestamp: "2023-06-13 16:45", read: true },
-      { id: 10, sender: "patient", text: "Thank you! I'll pick it up tomorrow.", timestamp: "2023-06-13 17:00", read: true },
-      { id: 11, sender: "pharmacy", text: "Great! We're open from 9AM to 8PM.", timestamp: "2023-06-13 17:02", read: true },
-      { id: 12, sender: "patient", text: "Is there a way to get it delivered? I'm not feeling well enough to come in person.", timestamp: "2023-06-13 17:05", read: true },
-    ],
-    4: [
-      { id: 13, sender: "pharmacy", text: "Hello! Do you need a refill for your prescription?", timestamp: "2023-06-18 09:10", read: false },
-    ],
-  },
-  doctor: {
-    5: [
-      { id: 14, sender: "patient", text: "Hello Dr. Singh, I need to reschedule my appointment for tomorrow.", timestamp: "2023-06-16 09:30", read: true },
-      { id: 15, sender: "doctor", text: "Good morning. That's fine. What time works for you?", timestamp: "2023-06-16 09:35", read: true },
-      { id: 16, sender: "patient", text: "Would 4PM be possible?", timestamp: "2023-06-16 09:37", read: true },
-      { id: 17, sender: "doctor", text: "Yes, 4PM works. I've updated your appointment in the system.", timestamp: "2023-06-16 09:40", read: true },
-    ],
-    6: [
-      { id: 18, sender: "patient", text: "Doctor, my fever hasn't gone down despite taking the medicine.", timestamp: "2023-06-17 20:15", read: false },
-    ],
-    7: [
-      { id: 19, sender: "doctor", text: "Hi Dr. Dubey, could you take a look at this patient case?", timestamp: "2023-06-18 11:20", read: false },
-    ],
-    8: [
-      { id: 20, sender: "pharmacy", text: "We're out of stock for Metformin. Can you suggest an alternative?", timestamp: "2023-06-17 14:45", read: true },
-      { id: 21, sender: "doctor", text: "You can substitute with Glucophage XR 500mg. Same dosage.", timestamp: "2023-06-17 15:10", read: true },
-    ],
-  },
-  pharmacy: {
-    9: [
-      { id: 22, sender: "doctor", text: "Hello, I need to check if you have Azithromycin in stock.", timestamp: "2023-06-12 11:20", read: true },
-      { id: 23, sender: "pharmacy", text: "Yes, we have it available. What strength do you need?", timestamp: "2023-06-12 11:25", read: true },
-      { id: 24, sender: "doctor", text: "500mg tablets. I'm planning to prescribe it to a patient today.", timestamp: "2023-06-12 11:27", read: true },
-      { id: 25, sender: "pharmacy", text: "We have the 500mg tablets in stock. Your patient can come anytime to collect them.", timestamp: "2023-06-12 11:30", read: true },
-    ],
-    10: [
-      { id: 26, sender: "patient", text: "Do you have any blood glucose testing kits available?", timestamp: "2023-06-14 17:25", read: false },
-    ],
-    11: [
-      { id: 27, sender: "patient", text: "Can you check if my prescription is ready?", timestamp: "2023-06-17 13:15", read: true },
-      { id: 28, sender: "pharmacy", text: "Yes, it's ready for pickup. We close at 8PM today.", timestamp: "2023-06-17 13:20", read: true },
-    ],
-  },
-};
-
-// User profiles for mock login
-const userProfiles = {
-  patient: {
-    id: "p1",
-    name: "Anisha Gupta",
-    avatar: "/assets/patient-avatar.jpg",
-    email: "anisha@example.com",
-    age: 28,
-    gender: "Female",
-    bloodGroup: "B+",
-    medicalHistory: ["Asthma", "Allergies"],
-    contactNumber: "9876543210",
-    address: "123 IIT Campus, Jodhpur",
-    emergencyContact: "9876543211 (Rahul Gupta - Husband)",
-    recentAppointments: [
-      { date: "2023-10-15", doctor: "Dr. Neha Sharma", reason: "Regular checkup" },
-      { date: "2023-09-05", doctor: "Dr. Shikha Chibber", reason: "Migraine" }
-    ]
-  },
-  doctor: {
-    id: "d1",
-    name: "Dr. Mohan Singh",
-    avatar: "/assets/doctor-avatar.jpg",
-    email: "dr.mohan@medihelp.com",
-    specialization: "Cardiologist",
-    qualifications: ["MBBS", "MD Cardiology", "FICC"],
-    experience: "12 years",
-    workingHours: "Mon-Fri: 9AM-5PM",
-    hospitalAffiliation: "IIT Jodhpur Medical Center",
-    contactNumber: "9876543212",
-    languages: ["English", "Hindi", "Punjabi"],
-    patientsSeen: 4500
-  },
-  pharmacy: {
-    id: "ph1",
-    name: "Campus Pharmacy",
-    avatar: "/assets/pharmacy-avatar.jpg",
-    email: "campus.pharmacy@medihelp.com",
-    licenseNumber: "PH-12345-JDH",
-    operatingHours: "Mon-Sat: 8AM-10PM, Sun: 9AM-7PM",
-    address: "Near IIT Jodhpur Main Gate",
-    contactNumber: "9876543213",
-    pharmacistOnDuty: "Rajesh Sharma",
-    servicesOffered: ["Prescription Filling", "OTC Medicines", "Medical Equipment", "Home Delivery"],
-    establishedYear: 2015
-  }
-};
-
-// Predefined reply texts for different user types
-const replyTexts = {
-  doctor: [
-    "I'll check your records and get back to you.",
-    "Have you tried taking the medication I prescribed earlier?",
-    "Would you like to schedule an appointment to discuss this further?",
-    "Thank you for the update. Keep monitoring your symptoms.",
-    "I recommend you get some rest and stay hydrated.",
-    "How long have you been experiencing these symptoms?",
-    "Please let me know if there's any change in your condition.",
-    "I'll prescribe something stronger if this doesn't work."
-  ],
-  patient: [
-    "Thank you for your advice, doctor.",
-    "When should I take this medication?",
-    "Is there anything else I should be aware of?",
-    "I'll make sure to follow your instructions.",
-    "Should I come in for a follow-up appointment?",
-    "The symptoms have improved since yesterday.",
-    "I've been taking the medicine as prescribed.",
-    "How long should I continue with this treatment?"
-  ],
-  pharmacy: [
-    "Your prescription will be ready in about 30 minutes.",
-    "We have the medication in stock.",
-    "Would you like us to deliver the medication?",
-    "Please bring your insurance card when you come to pick up your prescription.",
-    "The medication costs ₹750. Will you be paying by cash or card?",
-    "We're open until 8PM today.",
-    "This medication should be taken with food.",
-    "We can set up automatic refills for your prescriptions if you'd like."
-  ]
-};
-
-// Export the chat service
 export const chatService = {
-  // Get all conversations for a user type
-  getConversationsForUser: (userType) => {
-    return conversationsStore[userType] || {};
-  },
-  
-  // Get messages for a specific contact
-  getMessagesForContact: (userType, contactId) => {
-    if (conversationsStore[userType] && conversationsStore[userType][contactId]) {
-      return conversationsStore[userType][contactId];
+  // Get conversations for a user
+  getConversations: async (userId) => {
+    try {
+      // Query conversations where user is a participant
+      const q = query(
+        collection(db, "conversations"),
+        where("participants", "array-contains", userId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const conversations = [];
+      
+      for (const conversationDoc of querySnapshot.docs) {
+        const conversationData = conversationDoc.data();
+        const conversationId = conversationDoc.id;
+        
+        // Get the other participant's details
+        const otherParticipantId = conversationData.participants.find(id => id !== userId);
+        const otherParticipantDoc = await getDoc(doc(db, "users", otherParticipantId));
+        
+        conversations.push({
+          id: conversationId,
+          lastMessage: conversationData.lastMessage,
+          lastUpdated: conversationData.lastUpdated,
+          otherParticipant: {
+            id: otherParticipantId,
+            ...otherParticipantDoc.data()
+          }
+        });
+      }
+      
+      // Sort by last updated time
+      return conversations.sort((a, b) => 
+        b.lastUpdated?.toDate?.() - a.lastUpdated?.toDate?.() || 0
+      );
+    } catch (error) {
+      console.error("Get conversations error:", error);
+      throw error;
     }
-    return [];
   },
   
-  // Send a message
-  sendMessage: (userType, contactId, message, updatedConversations) => {
-    // Update the local store
-    if (!conversationsStore[userType]) {
-      conversationsStore[userType] = {};
+  // Get or create a conversation between two users
+  getOrCreateConversation: async (userId1, userId2) => {
+    try {
+      // Create a unique ID for the conversation using both user IDs (sorted to ensure consistency)
+      const participants = [userId1, userId2].sort();
+      const conversationId = `${participants[0]}_${participants[1]}`;
+      
+      // Check if conversation exists using the unique ID
+      const conversationRef = doc(db, "conversations", conversationId);
+      const conversationDoc = await getDoc(conversationRef);
+      
+      if (conversationDoc.exists()) {
+        // Conversation exists, return it
+        return {
+          id: conversationId,
+          ...conversationDoc.data()
+        };
+      }
+      
+      // Get user information for both participants
+      const user1Doc = await getDoc(doc(db, "users", userId1));
+      const user2Doc = await getDoc(doc(db, "users", userId2));
+      
+      if (!user1Doc.exists() || !user2Doc.exists()) {
+        throw new Error("One or both users do not exist");
+      }
+      
+      // Create new conversation with metadata
+      const newConversation = {
+        participants,
+        participantsInfo: {
+          [userId1]: {
+            name: user1Doc.data().name || "Unknown User",
+            avatar: user1Doc.data().photoURL || null,
+            userType: user1Doc.data().userType || "patient"
+          },
+          [userId2]: {
+            name: user2Doc.data().name || "Unknown User",
+            avatar: user2Doc.data().photoURL || null,
+            userType: user2Doc.data().userType || "doctor"
+          }
+        },
+        lastMessage: null,
+        lastMessageTime: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        unreadCount: {
+          [userId1]: 0,
+          [userId2]: 0
+        }
+      };
+      
+      // Set the document with the custom ID
+      await setDoc(conversationRef, newConversation);
+      
+      // Add this conversation to the users' conversation lists
+      await updateDoc(doc(db, "users", userId1), {
+        conversations: arrayUnion(conversationId)
+      });
+      
+      await updateDoc(doc(db, "users", userId2), {
+        conversations: arrayUnion(conversationId)
+      });
+      
+      return {
+        id: conversationId,
+        ...newConversation
+      };
+    } catch (error) {
+      console.error("Get or create conversation error:", error);
+      throw error;
     }
-    conversationsStore[userType][contactId] = updatedConversations[contactId];
-    
-    // In a real app, we would send this to a backend API
-    console.log(`Message sent from ${userType} to contact ${contactId}:`, message);
-    
-    return true;
   },
   
-  // Receive a message
-  receiveMessage: (userType, contactId, message, updatedConversations) => {
-    // Update the local store
-    if (!conversationsStore[userType]) {
-      conversationsStore[userType] = {};
+  // Get messages for a conversation with pagination
+  getMessages: async (conversationId, pageSize = 20, lastMessageTimestamp = null) => {
+    try {
+      let messagesQuery;
+      
+      if (lastMessageTimestamp) {
+        messagesQuery = query(
+          collection(db, "conversations", conversationId, "messages"),
+          orderBy("createdAt", "desc"),
+          where("createdAt", "<", lastMessageTimestamp),
+          limit(pageSize)
+        );
+      } else {
+        messagesQuery = query(
+          collection(db, "conversations", conversationId, "messages"),
+          orderBy("createdAt", "desc"),
+          limit(pageSize)
+        );
+      }
+      
+      const querySnapshot = await getDocs(messagesQuery);
+      
+      // Convert to array and reverse to get chronological order
+      const messages = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })).reverse();
+      
+      return messages;
+    } catch (error) {
+      console.error("Get messages error:", error);
+      throw error;
     }
-    conversationsStore[userType][contactId] = updatedConversations[contactId];
-    
-    // In a real app, we would receive this via WebSockets or polling
-    console.log(`Message received by ${userType} from contact ${contactId}:`, message);
-    
-    return true;
   },
   
-  // Update conversations (e.g., mark as read)
-  updateConversations: (updatedConversations) => {
-    // In a real app, we would send this to a backend API
-    console.log("Conversations updated:", updatedConversations);
+  // Send a new message
+  sendMessage: async (conversationId, senderId, text, attachments = []) => {
+    try {
+      // Get the conversation to check if it exists and get the other participant
+      const conversationRef = doc(db, "conversations", conversationId);
+      const conversationDoc = await getDoc(conversationRef);
+      
+      if (!conversationDoc.exists()) {
+        throw new Error("Conversation not found");
+      }
+      
+      const conversationData = conversationDoc.data();
+      
+      // Find the recipient (the other participant)
+      const recipientId = conversationData.participants.find(id => id !== senderId);
+      
+      const messageData = {
+        sender: senderId,
+        text,
+        attachments,
+        read: false,
+        readBy: [senderId],
+        createdAt: serverTimestamp()
+      };
+      
+      // Add message to the conversation's messages subcollection
+      const messageRef = await addDoc(
+        collection(db, "conversations", conversationId, "messages"),
+        messageData
+      );
+      
+      // Update conversation with last message info
+      await updateDoc(conversationRef, {
+        lastMessage: text,
+        lastMessageTime: serverTimestamp(),
+        lastMessageSenderId: senderId,
+        [`unreadCount.${recipientId}`]: conversationData.unreadCount[recipientId] + 1
+      });
+      
+      // Add message ID to the message data
+      const newMessage = {
+        id: messageRef.id,
+        ...messageData
+      };
+      
+      return newMessage;
+    } catch (error) {
+      console.error("Send message error:", error);
+      throw error;
+    }
+  },
+  
+  // Mark messages as read
+  markMessagesAsRead: async (conversationId, userId) => {
+    try {
+      // Get the conversation
+      const conversationRef = doc(db, "conversations", conversationId);
+      const conversationDoc = await getDoc(conversationRef);
+      
+      if (!conversationDoc.exists()) {
+        throw new Error("Conversation not found");
+      }
+      
+      // Get unread messages from the other participant
+      const q = query(
+        collection(db, "conversations", conversationId, "messages"),
+        where("sender", "!=", userId),
+        where("readBy", "array-contains-any", [userId])
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      // Mark each message as read
+      const updatePromises = querySnapshot.docs.map(messageDoc => 
+        updateDoc(doc(db, "conversations", conversationId, "messages", messageDoc.id), {
+          read: true,
+          readBy: arrayUnion(userId)
+        })
+      );
+      
+      // Reset unread count for this user
+      updatePromises.push(
+        updateDoc(conversationRef, {
+          [`unreadCount.${userId}`]: 0
+        })
+      );
+      
+      await Promise.all(updatePromises);
+      
+      return true;
+    } catch (error) {
+      console.error("Mark messages as read error:", error);
+      throw error;
+    }
+  },
+  
+  // Subscribe to new messages in a conversation
+  subscribeToMessages: (conversationId, callback) => {
+    if (!conversationId) {
+      console.error("No conversation ID provided");
+      return () => {}; // Return empty function if no ID
+    }
     
-    return true;
+    const messagesQuery = query(
+      collection(db, "conversations", conversationId, "messages"),
+      orderBy("createdAt", "asc")
+    );
+    
+    return onSnapshot(messagesQuery, (querySnapshot) => {
+      const messages = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      callback(messages);
+    }, error => {
+      console.error("Messages subscription error:", error);
+    });
+  },
+
+  // Subscribe to conversations list in real-time
+  subscribeToConversations: (userId, callback) => {
+    if (!userId) {
+      console.error("No user ID provided");
+      return () => {}; // Return empty function if no ID
+    }
+    
+    const conversationsQuery = query(
+      collection(db, "conversations"),
+      where("participants", "array-contains", userId),
+      orderBy("lastMessageTime", "desc")
+    );
+    
+    return onSnapshot(conversationsQuery, async (querySnapshot) => {
+      const conversations = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      callback(conversations);
+    }, error => {
+      console.error("Conversations subscription error:", error);
+    });
   },
   
-  // Login a user
-  loginUser: (userType, username, password) => {
-    // In a real app, we would authenticate against a backend
-    // For demo, always return the userProfile
-    return userProfiles[userType];
+  // Get a list of users who can be messaged
+  getPotentialContacts: async (userId, userType) => {
+    try {
+      // Different user types that can be contacted based on the current user's type
+      const contactUserTypes = {
+        patient: ["doctor", "pharmacy"],
+        doctor: ["patient", "doctor", "pharmacy"],
+        pharmacy: ["patient", "doctor"]
+      };
+      
+      // Get contacts based on user type
+      const relevantTypes = contactUserTypes[userType] || ["patient", "doctor", "pharmacy"];
+      
+      // Query users excluding the current user
+      const usersQuery = query(
+        collection(db, "users"),
+        where("userType", "in", relevantTypes)
+      );
+      
+      const querySnapshot = await getDocs(usersQuery);
+      
+      // Format user data and exclude current user
+      return querySnapshot.docs
+        .filter(doc => doc.id !== userId)
+        .map(doc => ({
+          id: doc.id,
+          name: doc.data().name || "Unknown User",
+          avatar: doc.data().photoURL || null,
+          userType: doc.data().userType || "patient",
+          specialization: doc.data().specialization || null,
+          address: doc.data().address || null,
+          online: doc.data().online || false,
+          lastSeen: doc.data().lastSeen || null
+        }));
+    } catch (error) {
+      console.error("Get potential contacts error:", error);
+      throw error;
+    }
   },
   
-  // Get reply texts for a given user type
-  getReplyTexts: (userType) => {
-    return replyTexts[userType] || replyTexts.patient;
+  // Subscribe to user online status
+  subscribeToUserStatus: (userId, callback) => {
+    return onSnapshot(doc(db, "users", userId), (doc) => {
+      if (doc.exists()) {
+        const userData = doc.data();
+        callback({
+          id: userId,
+          online: userData.online || false,
+          lastSeen: userData.lastSeen
+        });
+      }
+    });
+  },
+  
+  // Update user online status
+  updateUserStatus: async (userId, isOnline) => {
+    try {
+      await updateDoc(doc(db, "users", userId), {
+        online: isOnline,
+        lastSeen: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Update user status error:", error);
+      throw error;
+    }
   }
 };
+
+export default chatService;

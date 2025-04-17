@@ -22,6 +22,7 @@ const DocAnswers = () => {
   const [messageLoading, setMessageLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [currentConversationId, setCurrentConversationId] = useState(null);
   
   // Check if user is already logged in
   useEffect(() => {
@@ -287,24 +288,33 @@ const DocAnswers = () => {
     setSelectedContact(contact);
     
     try {
-      // Get or create conversation with this contact
-      const conversation = await chatApi.getOrCreateConversation(contact._id);
+      // Clear any previous errors
+      setError(null);
+      
+      // Create or get the conversation with this contact
+      const conversation = await chatApi.getOrCreateConversation(currentUser._id, contact._id);
       
       // Get messages for this conversation
-      const messages = await chatApi.getMessages(conversation._id);
+      const messages = await chatApi.getMessages(conversation.id);
       
       // Update state
       setConversations(prev => ({
         ...prev,
-        [conversation._id]: messages
+        [conversation.id]: messages
       }));
       
       // Mark messages as read
-      for (const msg of messages) {
-        if (msg.sender !== currentUser._id && !msg.readBy?.includes(currentUser._id)) {
-          chatApi.markAsRead(msg._id);
+      if (messages && messages.length > 0) {
+        for (const msg of messages) {
+          if (msg.sender !== currentUser._id && !msg.readBy?.includes(currentUser._id)) {
+            chatApi.markAsRead(msg._id);
+          }
         }
       }
+      
+      // Store the current conversation ID for easy reference
+      setCurrentConversationId(conversation.id);
+      
     } catch (error) {
       console.error('Error selecting contact:', error);
       setError('Failed to load conversation');
@@ -314,26 +324,23 @@ const DocAnswers = () => {
   // Handle sending messages
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!message.trim() || !selectedContact) return;
+    if (!message.trim() || !selectedContact || !currentConversationId) return;
     
     setMessageLoading(true);
     
     try {
-      // Create a conversation if it doesn't exist
-      const conversation = await chatApi.getOrCreateConversation(selectedContact._id);
-      
       // Emit typing stop event
-      socketRef.current?.emit('typing:stop', conversation._id);
+      socketRef.current?.emit('typing:stop', currentConversationId);
       
       // Send message via API
-      const newMessage = await chatApi.sendMessage(conversation._id, message);
+      const newMessage = await chatApi.sendMessage(currentConversationId, currentUser._id, message);
       
       // Update local state
       setConversations(prev => {
-        const existingMessages = prev[conversation._id] || [];
+        const existingMessages = prev[currentConversationId] || [];
         return {
           ...prev,
-          [conversation._id]: [...existingMessages, newMessage]
+          [currentConversationId]: [...existingMessages, newMessage]
         };
       });
       
@@ -662,17 +669,9 @@ const DocAnswers = () => {
                       <div className="chat-messages" style={{ height: "550px", overflowY: "auto", background: "#f8f9fb" }}>
                         <div className="messages-container p-3">
                           {(() => {
-                            // Find the conversation for this contact
-                            const conversationId = Object.keys(conversations).find(id => {
-                              return conversations[id].some(msg => 
-                                msg.sender === selectedContact._id || 
-                                msg.receiver === selectedContact._id ||
-                                (msg.sender !== currentUser._id && msg.receiver === selectedContact._id)
-                              );
-                            }) || (selectedContact && selectedContact._id); // Fallback to contact ID if no conversation found
-                            
-                            if (conversationId && conversations[conversationId] && conversations[conversationId].length > 0) {
-                              return conversations[conversationId].map((msg, index) => (
+                            // Now use the current conversation ID directly
+                            if (currentConversationId && conversations[currentConversationId] && conversations[currentConversationId].length > 0) {
+                              return conversations[currentConversationId].map((msg, index) => (
                                 msg.isTyping ? (
                                   <div key={`typing-${index}`} className="message-row other-message">
                                     <div className="typing-indicator">
@@ -683,15 +682,15 @@ const DocAnswers = () => {
                                   </div>
                                 ) : (
                                   <div
-                                    key={msg._id || index}
+                                    key={msg._id || msg.id || index}
                                     className={`message-row ${msg.sender === currentUser._id ? "own-message" : "other-message"}`}
                                   >
                                     <div className="message-content">
                                       <div className="message-bubble">
                                         <div className="message-text">{msg.text}</div>
                                         <div className="message-meta">
-                                          <small>{new Date(msg.timestamp).toLocaleString()}</small>
-                                          {msg.sender === currentUser._id && msg.readBy && msg.readBy.length > 1 && (
+                                          <small>{new Date(msg.createdAt?.toDate?.() || msg.timestamp || Date.now()).toLocaleString()}</small>
+                                          {msg.sender === currentUser._id && msg.read && (
                                             <i className="fas fa-check-double ms-1 text-primary"></i>
                                           )}
                                         </div>
