@@ -12,6 +12,7 @@ import Doctors from "./pages/Doctors";
 import SignUp from "./pages/SignUp";
 import DocAnswers from "./pages/DocAnswers";
 // import DocExchange from './pages/DocExchange';
+import CommunityForums from "./pages/CommunityForums";
 
 import NavBar from "./components/NavBar"; 
 import Header from "./components/Header"; 
@@ -45,6 +46,7 @@ function App() {
             <Route path="/pres-doctor" element={<PrescDoc />} />
             <Route path="/pres-patient" element={<PrescPatient />} />
             {/* <Route path="/doc-exchange" element={<DocExchange />} /> */}
+            <Route path="/community-forum" element={<CommunityForums />} />
 
             {/* existing routes */}
             <Route path="/profile" element={<UserProfile />} />

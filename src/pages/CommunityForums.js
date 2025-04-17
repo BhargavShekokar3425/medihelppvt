@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import NewPostModal from './NewPostModal';
 import AddAnswerModal from './AddAnswerModal';
-import CommentSection from './CommentSection'; // Import the new CommentSection component
+import CommentSection from './CommentSection'; // Ensure this component exists and is functional
 
 const CommunityForums = () => {
   const [posts, setPosts] = useState([
@@ -23,8 +23,8 @@ const CommunityForums = () => {
           createdAt: new Date()
         }
       ],
-      showAnswers: false, // Track whether answers are visible
-      comments: [] // Initialize comments for the post
+      showAnswers: false,
+      comments: []
     },
     {
       id: 2,
@@ -38,7 +38,7 @@ const CommunityForums = () => {
       userDownvoted: false,
       answers: [],
       showAnswers: false,
-      comments: [] // Initialize comments for the post
+      comments: []
     }
   ]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,7 +61,7 @@ const CommunityForums = () => {
           upvotes: isUpvoted ? post.upvotes + 1 : post.upvotes - 1,
           downvotes: isDownvoted ? post.downvotes - 1 : post.downvotes,
           userUpvoted: isUpvoted,
-          userDownvoted: false // Reset downvote if upvoted
+          userDownvoted: false
         };
       }
       return post;
@@ -78,7 +78,7 @@ const CommunityForums = () => {
           downvotes: isDownvoted ? post.downvotes + 1 : post.downvotes - 1,
           upvotes: isUpvoted ? post.upvotes - 1 : post.upvotes,
           userDownvoted: isDownvoted,
-          userUpvoted: false // Reset upvote if downvoted
+          userUpvoted: false
         };
       }
       return post;
@@ -122,119 +122,62 @@ const CommunityForums = () => {
   };
 
   return (
-    <div>
+    <div className="container mt-5">
       <h1>Community Forums</h1>
       <input
         type="text"
         placeholder="Search posts..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        style={{ marginBottom: '20px', width: '100%', padding: '10px' }}
+        className="form-control mb-3"
       />
-      <button onClick={() => setShowModal(true)} style={{ marginBottom: '20px' }}>
+      <button className="btn btn-primary mb-3" onClick={() => setShowModal(true)}>
         Create New Post
       </button>
       {filteredPosts.map(post => (
-        <div
-          key={post.id}
-          style={{
-            backgroundColor: '#f8f9fa',
-            border: '1px solid #dee2e6',
-            borderRadius: '8px',
-            padding: '15px',
-            marginBottom: '15px',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-          }}
-        >
-          <h3 style={{ color: '#343a40' }}>{post.title}</h3>
-          <p style={{ color: '#495057' }}>{post.body}</p>
-          <p><strong>Tags:</strong> {post.tags.join(', ')}</p>
-          <p><strong>Author:</strong> {post.author}</p>
-          <div>
-            <button
-              onClick={() => toggleUpvote(post.id)}
-              style={{
-                backgroundColor: post.userUpvoted ? 'lightgreen' : 'white',
-                border: '1px solid #ccc',
-                padding: '5px 10px',
-                marginRight: '10px',
-                cursor: 'pointer',
-                borderRadius: '4px'
-              }}
-            >
-              Upvote ({post.upvotes})
-            </button>
-            <button
-              onClick={() => toggleDownvote(post.id)}
-              style={{
-                backgroundColor: post.userDownvoted ? 'lightcoral' : 'white',
-                border: '1px solid #ccc',
-                padding: '5px 10px',
-                marginRight: '10px',
-                cursor: 'pointer',
-                borderRadius: '4px'
-              }}
-            >
-              Downvote ({post.downvotes})
-            </button>
-            <button
-              onClick={() => setAnswerModal({ show: true, postId: post.id })}
-              style={{
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                padding: '5px 10px',
-                cursor: 'pointer',
-                borderRadius: '4px'
-              }}
-            >
-              Add Answer
-            </button>
-          </div>
-          {(post.answers || []).length > 0 ? (
+        <div key={post.id} className="card mb-3">
+          <div className="card-body">
+            <h5 className="card-title">{post.title}</h5>
+            <p className="card-text">{post.body}</p>
+            <p><strong>Tags:</strong> {post.tags.join(', ')}</p>
+            <p><strong>Author:</strong> {post.author}</p>
             <div>
-              <button
-                onClick={() => toggleAnswersVisibility(post.id)}
-                style={{
-                  marginTop: '10px',
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  padding: '5px 10px',
-                  cursor: 'pointer',
-                  borderRadius: '4px'
-                }}
-              >
-                {post.showAnswers ? 'Hide All Answers...' : `View All Answers (${post.answers.length})`}
+              <button className="btn btn-success me-2" onClick={() => toggleUpvote(post.id)}>
+                Upvote ({post.upvotes})
               </button>
-              {post.showAnswers && (
-                <div style={{ marginTop: '10px', paddingLeft: '15px' }}>
-                  {post.answers.map((answer, index) => (
-                    <div key={index} style={{ marginBottom: '10px', borderBottom: '1px solid #dee2e6', paddingBottom: '10px' }}>
-                      <p style={{ marginBottom: '5px' }}>{answer.body}</p>
-                      {answer.badge && (
-                        <p style={{ color: 'green', fontSize: '0.9em' }}><strong>{answer.badge}</strong></p>
-                      )}
-                      <p style={{ fontSize: '0.8em', color: '#6c757d' }}>
-                        Answered by: {answer.author} on {answer.createdAt.toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <button className="btn btn-danger me-2" onClick={() => toggleDownvote(post.id)}>
+                Downvote ({post.downvotes})
+              </button>
+              <button className="btn btn-secondary" onClick={() => setAnswerModal({ show: true, postId: post.id })}>
+                Add Answer
+              </button>
             </div>
-          ) : (
-            <p style={{ marginTop: '10px', color: '#6c757d' }}>No Answers Yet!</p>
-          )}
-          <CommentSection
-            comments={post.comments}
-            onAddComment={(comment) => addComment(post.id, comment)}
-          />
+            {post.answers.length > 0 && (
+              <div className="mt-3">
+                <button className="btn btn-info" onClick={() => toggleAnswersVisibility(post.id)}>
+                  {post.showAnswers ? 'Hide Answers' : `View Answers (${post.answers.length})`}
+                </button>
+                {post.showAnswers && (
+                  <ul className="list-group mt-2">
+                    {post.answers.map((answer, index) => (
+                      <li key={index} className="list-group-item">
+                        <p>{answer.body}</p>
+                        <small><strong>{answer.author}</strong> - {answer.badge}</small>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            <CommentSection
+              comments={post.comments}
+              onAddComment={(comment) => addComment(post.id, comment)}
+            />
+          </div>
         </div>
       ))}
       {showModal && (
         <NewPostModal
-          communityType="general"
           onClose={() => setShowModal(false)}
           onSubmit={(newPost) => setPosts([...posts, { ...newPost, id: posts.length + 1, upvotes: 0, downvotes: 0, userUpvoted: false, userDownvoted: false, answers: [], showAnswers: false, comments: [] }])}
         />
