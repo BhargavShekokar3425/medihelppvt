@@ -18,6 +18,8 @@ import './App.css';
 import { BackendProvider } from './contexts/BackendContext';
 import { initializeFirebase } from './firebase/init';
 
+import CommunityForums from './pages/CommunityForums';
+
 function App() { 
   // Initialize Firebase when the app loads
   useEffect(() => {
@@ -40,6 +42,7 @@ function App() {
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/pres-doctor" element={<PrescDoc />} />
             <Route path="/pres-patient" element={<PrescPatient />} />
+            <Route path="/forums" element={<CommunityForums />} />
 
             {/* existing routes */}
             <Route path="/profile" element={<UserProfile />} />
