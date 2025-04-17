@@ -51,3 +51,4 @@ try {
 }
 
 export { auth, db, storage, serverTimestamp, arrayUnion, usingMockServices };
+export default firebaseConfig;
