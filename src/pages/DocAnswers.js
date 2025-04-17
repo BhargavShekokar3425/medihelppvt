@@ -900,7 +900,6 @@ const DocAnswers = () => {
         )}
         {showProfileModal && <div className="modal-backdrop fade show"></div>}
       </div>
-      <Footer />
     </div>
   );
 };
