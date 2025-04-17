@@ -1,0 +1,8 @@
+.card {
+    scrollbar-width: thin;
+    scrollbar-color: #ccc transparent;
+  }
+
+form label {
+  font-weight: bold;
+}

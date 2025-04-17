@@ -1,4 +1,6 @@
 import React, { useEffect } from "react";
+import { initializeApp } from "firebase/app";
+import firebaseConfig from "./firebase/config";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import UserProfile from "./pages/UserProfile";
 
@@ -9,6 +11,7 @@ import PrescPatient from "./pages/PresPatients";
 import Doctors from "./pages/Doctors";
 import SignUp from "./pages/SignUp";
 import DocAnswers from "./pages/DocAnswers";
+// import DocExchange from './pages/DocExchange';
 
 import NavBar from "./components/NavBar"; 
 import Header from "./components/Header"; 
@@ -21,6 +24,7 @@ import { initializeFirebase } from './firebase/init';
 function App() { 
   // Initialize Firebase when the app loads
   useEffect(() => {
+    initializeApp(firebaseConfig);
     initializeFirebase();
   }, []);
 
@@ -40,6 +44,7 @@ function App() {
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/pres-doctor" element={<PrescDoc />} />
             <Route path="/pres-patient" element={<PrescPatient />} />
+            {/* <Route path="/doc-exchange" element={<DocExchange />} /> */}
 
             {/* existing routes */}
             <Route path="/profile" element={<UserProfile />} />
