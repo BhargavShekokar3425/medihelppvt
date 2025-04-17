@@ -23,7 +23,13 @@ const mockData = {
   conversations: {},
   messages: {},
   prescriptions: {},
-  reviews: {}
+  reviews: {},
+  forums: {
+    medical: [],
+    pharmacy: []
+  },
+  threads: {},
+  comments: {}
 };
 
 // Mock authentication
@@ -60,16 +66,18 @@ export const mockFirestore = {
     add: async (data) => {
       const id = `doc_${Date.now()}`;
       if (!mockData[collectionName]) mockData[collectionName] = {};
-      mockData[collectionName][id] = data;
+      mockData[collectionName][id] = { id, ...data, createdAt: new Date() };
       return { id };
     },
-    where: () => ({
+    where: (field, operator, value) => ({
       get: async () => ({
-        docs: Object.keys(mockData[collectionName] || {}).map(id => ({
-          id,
-          data: () => mockData[collectionName][id],
-          exists: true
-        })),
+        docs: Object.entries(mockData[collectionName] || {})
+          .filter(([_, doc]) => doc[field] === value)
+          .map(([id, doc]) => ({
+            id,
+            data: () => doc,
+            exists: true
+          })),
         empty: Object.keys(mockData[collectionName] || {}).length === 0
       })
     })
