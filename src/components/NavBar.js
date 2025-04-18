@@ -16,13 +16,18 @@ const NavBar = () => {
           <img src="/assets/surgery.svg" width="47" alt="Doctors" className="nav-icon"/>
           <div>Doctors</div>
         </Link>
-        <Link className="p-2 spl_text" style={{ fontWeight: "bolder", color: "rgb(136, 38, 38)" }} to="/sos">
-          <img src="/assets/diagnostic-center.png" width="47" alt="SOS" className="nav-icon"/>
-          <div>SOS</div> 
+        <Link className="p-2 spl_text" style={{ fontWeight: "bolder", color: "#ff3a3a" }} to="/sos">
+          <img src="/assets/emergency.png" width="47" alt="SOS" className="nav-icon"/>
+          <div>Emergency SOS</div> 
         </Link>
         <Link className="p-2 text-dark spl_text" style={{ fontWeight: "bolder" }} to="/appointments">
           <img src="/assets/radiology.png" width="44" alt="Appointments" className="nav-icon"/>
           <div>Appointments</div> 
+        </Link>
+        {/* Add Chat link */}
+        <Link className="p-2 text-dark spl_text" style={{ fontWeight: "bolder" }} to="/chat">
+          <img src="/assets/chat-icon.png" width="47" alt="Chat" className="nav-icon"/>
+          <div>Chat</div>
         </Link>
         <Link className="p-2 text-dark spl_text" style={{ fontWeight: "bolder" }} to="/docanswers">
           <img src="/assets/talkdoc.svg" width="62" alt="DocAnswers" className="nav-icon"/>

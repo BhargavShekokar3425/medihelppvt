@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
-const messageSchema = new mongoose.Schema({
-  conversation: {
+const MessageSchema = new mongoose.Schema({
+  conversationId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Conversation',
     required: true
@@ -12,32 +12,32 @@ const messageSchema = new mongoose.Schema({
     required: true
   },
   text: {
-    type: String,
-    trim: true
+    type: String
   },
   attachments: [{
-    type: String,
-    url: String,
-    filename: String,
-    mimetype: String,
+    type: {
+      type: String,
+      required: true
+    },
+    url: {
+      type: String,
+      required: true
+    },
+    name: String,
     size: Number
   }],
   readBy: [{
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    readAt: {
-      type: Date,
-      default: Date.now
-    }
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }],
-  isDeleted: {
-    type: Boolean,
-    default: false
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
-}, {
-  timestamps: true
 });
 
-module.exports = mongoose.model('Message', messageSchema);
+module.exports = mongoose.model('Message', MessageSchema);

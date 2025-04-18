@@ -1,52 +1,102 @@
 const fs = require('fs');
 const path = require('path');
+const mongoose = require('mongoose');
 
-// Define the data directory
-const DATA_DIR = path.join(__dirname, '..', 'data', 'db');
+// Directory for data storage
+const dataDir = path.join(__dirname, '../data');
 
-// Ensure the data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  console.log(`Created data directory: ${DATA_DIR}`);
+// Ensure data directory exists
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir);
 }
 
-// Save collection to disk
-const saveCollection = (collectionName, data) => {
+// Save a collection to a JSON file
+exports.saveCollection = (name, data) => {
   try {
-    const filePath = path.join(DATA_DIR, `${collectionName}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    console.log(`[DB] Saved ${collectionName} collection to disk`);
+    const filePath = path.join(dataDir, `${name}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
     return true;
   } catch (error) {
-    console.error(`[DB] Error saving ${collectionName} collection:`, error);
+    console.error(`Error saving ${name} collection:`, error);
     return false;
   }
 };
 
-// Load collection from disk
-const loadCollection = (collectionName, defaultData = []) => {
+// Load a collection from a JSON file
+exports.loadCollection = (name, defaultData = []) => {
+  const filePath = path.join(dataDir, `${name}.json`);
   try {
-    const filePath = path.join(DATA_DIR, `${collectionName}.json`);
-    
     if (fs.existsSync(filePath)) {
-      const rawData = fs.readFileSync(filePath, 'utf8');
-      const parsedData = JSON.parse(rawData);
-      console.log(`[DB] Loaded ${collectionName} collection from disk`);
-      return parsedData;
-    } else {
-      console.log(`[DB] Collection file not found for ${collectionName}, using default data`);
-      // Save default data if file doesn't exist
-      saveCollection(collectionName, defaultData);
-      return defaultData;
+      const fileData = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(fileData);
     }
   } catch (error) {
-    console.error(`[DB] Error loading ${collectionName} collection:`, error);
-    return defaultData;
+    console.error(`Error loading ${name} collection:`, error);
+  }
+  return defaultData;
+};
+
+// Connect to MongoDB
+exports.connectToMongoDB = async (uri) => {
+  try {
+    const conn = await mongoose.connect(uri);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    return true;
+  } catch (error) {
+    console.error(`MongoDB Connection Error: ${error.message}`);
+    return false;
   }
 };
 
-module.exports = {
-  saveCollection,
-  loadCollection,
-  DATA_DIR
+// Get database connection
+exports.getConnection = () => {
+  return mongoose.connection;
+};
+
+// Check if MongoDB is connected
+exports.isMongoDBConnected = () => {
+  return mongoose.connection && mongoose.connection.readyState === 1;
+};
+
+// Seed data to the database
+exports.seedData = async (model, data) => {
+  try {
+    const count = await model.estimatedDocumentCount();
+    if (count === 0) {
+      await model.insertMany(data);
+      console.log(`Seeded initial ${model.collection.name} data`);
+    }
+  } catch (error) {
+    console.error(`Error seeding ${model.collection.name} data:`, error);
+  }
+};
+
+// Create or update document with fallback to in-memory store
+exports.createOrUpdate = async (model, query, data, inMemoryStore) => {
+  try {
+    // If MongoDB is connected, use it
+    if (exports.isMongoDBConnected()) {
+      const doc = await model.findOneAndUpdate(
+        query,
+        { $set: data },
+        { new: true, upsert: true }
+      );
+      return doc;
+    }
+    
+    // Fallback to in-memory store if available
+    if (inMemoryStore) {
+      const collection = inMemoryStore[model.collection.name.toLowerCase()];
+      if (collection) {
+        const id = query._id || `gen_${Date.now()}`;
+        collection[id] = { ...collection[id], ...data, _id: id };
+        return collection[id];
+      }
+    }
+    
+    throw new Error('No storage mechanism available');
+  } catch (error) {
+    console.error('Create/update error:', error);
+    throw error;
+  }
 };

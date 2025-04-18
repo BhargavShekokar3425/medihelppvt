@@ -1,0 +1,285 @@
+.message {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 4px;
+  position: relative;
+}
+
+.message.new-group {
+  margin-top: 8px;
+}
+
+.message.mine {
+  justify-content: flex-end;
+}
+
+.message.theirs {
+  justify-content: flex-start;
+}
+
+.message-avatar {
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.message-avatar img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.message-bubble {
+  padding: 8px 12px;
+  border-radius: 18px;
+  max-width: 100%;
+  position: relative;
+  word-wrap: break-word;
+}
+
+.message-bubble.mine {
+  background-color: #dcf8c6;
+  border-bottom-right-radius: 5px;
+}
+
+.message-bubble.theirs {
+  background-color: #e0e0e0;
+  border-bottom-left-radius: 5px;
+}
+
+.message-bubble.has-attachment {
+  padding-bottom: 4px;
+}
+
+.message-bubble.start-of-group.mine {
+  border-top-right-radius: 18px;
+}
+
+.message-bubble.start-of-group.theirs {
+  border-top-left-radius: 18px;
+}
+
+.message-bubble.end-of-group.mine {
+  border-bottom-right-radius: 5px;
+}
+
+.message-bubble.end-of-group.theirs {
+  border-bottom-left-radius: 5px;
+}
+
+.message-text {
+  font-size: 0.95rem;
+  color: #333;
+  margin-bottom: 2px;
+  white-space: pre-wrap;
+}
+
+.message-link {
+  color: #0078ff;
+  text-decoration: underline;
+}
+
+.message-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.attachment-wrapper {
+  position: relative;
+  max-width: 300px;
+}
+
+.message-image-container {
+  position: relative;
+  min-width: 200px;
+  max-width: 300px;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f0f0f0;
+}
+
+.message-image {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.message-image.loaded {
+  opacity: 1;
+}
+
+.image-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f0f0;
+}
+
+.message-video-container {
+  max-width: 300px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.message-video {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.message-audio-container {
+  max-width: 250px;
+}
+
+.message-audio {
+  width: 100%;
+  min-width: 200px;
+}
+
+.message-file {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.message-file i {
+  margin-right: 8px;
+  font-size: 1.2rem;
+  color: #5c6bc0;
+}
+
+.file-name {
+  flex-grow: 1;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 8px;
+}
+
+.file-download {
+  color: #2196f3;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+}
+
+.message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 0.7rem;
+  color: #888;
+  margin-top: 2px;
+  gap: 4px;
+}
+
+.message-time {
+  white-space: nowrap;
+}
+
+.message-status {
+  display: flex;
+  align-items: center;
+}
+
+.message-status i {
+  font-size: 0.8rem;
+}
+
+.message-status i.read {
+  color: #4fc3f7;
+}
+
+.message-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  background-color: #fff;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+.message-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  color: #616161;
+  font-size: 0.9rem;
+}
+
+.message-actions button:hover {
+  background-color: #f5f5f5;
+}
+
+.message-actions button.delete:hover {
+  color: #f44336;
+}
+
+/* Media queries for responsive layout */
+@media (max-width: 768px) {
+  .message-image-container, .message-video-container {
+    max-width: 220px;
+  }
+  
+  .message-audio {
+    min-width: 180px;
+  }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .message-bubble.mine {
+    background-color: #056162;
+  }
+  
+  .message-bubble.theirs {
+    background-color: #222c32;
+  }
+  
+  .message-text {
+    color: #e0e0e0;
+  }
+  
+  .message-link {
+    color: #4fc3f7;
+  }
+  
+  .message-file {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .message-actions {
+    background-color: #2a2a2a;
+  }
+  
+  .message-actions button {
+    color: #bbb;
+  }
+  
+  .message-actions button:hover {
+    background-color: #333;
+  }
+  
+  .image-loading {
+    background-color: #2a2a2a;
+  }
+}

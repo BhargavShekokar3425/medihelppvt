@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const conversationSchema = new mongoose.Schema({
+const ConversationSchema = new mongoose.Schema({
   participants: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -11,21 +11,34 @@ const conversationSchema = new mongoose.Schema({
     enum: ['individual', 'group'],
     default: 'individual'
   },
-  name: String, // For group chats
   lastMessage: {
+    type: String
+  },
+  lastMessageAt: {
+    type: Date,
+    default: Date.now
+  },
+  lastSenderId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Message'
+    ref: 'User'
+  },
+  unreadCounts: {
+    type: Map,
+    of: Number,
+    default: {}
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  isActive: {
-    type: Boolean,
-    default: true
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
-}, {
-  timestamps: true
 });
 
-module.exports = mongoose.model('Conversation', conversationSchema);
+module.exports = mongoose.model('Conversation', ConversationSchema);

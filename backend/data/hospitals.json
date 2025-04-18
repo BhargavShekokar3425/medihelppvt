@@ -1,0 +1,14 @@
+[
+  {
+    "name": "IIT Jodhpur Medical Center",
+    "email": "b23cs1015@iitj.ac.in",
+    "address": "IIT Jodhpur, Rajasthan",
+    "phone": "123-456-7890"
+  },
+  {
+    "name": "City Hospital",
+    "email": "b23cs1008@iitj.ac.in",
+    "address": "123 Main Street, Jodhpur",
+    "phone": "234-567-8901"
+  }
+]

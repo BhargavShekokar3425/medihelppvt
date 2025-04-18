@@ -12,7 +12,9 @@ import SignUp from "./pages/SignUp";
 import DocAnswers from "./pages/DocAnswers";
 import CommunityForums from "./pages/CommunityForums";
 import HomePage from "./pages/HomePage";
+import SOSPage from "./pages/SOSPage";
 import AuthWrapper from "./components/AuthWrapper";
+import Chat from "./pages/Chat";  // Add this import
 
 import NavBar from "./components/NavBar"; 
 import Header from "./components/Header"; 
@@ -37,7 +39,7 @@ function App() {
           {/* Protected routes */}
           <Route path="/sos" element={
             <AuthWrapper>
-              <h1>SOS Page</h1>
+              <SOSPage />
             </AuthWrapper>
           } />
           <Route path="/appointments" element={
@@ -78,6 +80,11 @@ function App() {
           <Route path="/profile" element={
             <AuthWrapper>
               <UserProfile />
+            </AuthWrapper>
+          } />
+          <Route path="/chat" element={
+            <AuthWrapper>
+              <Chat />
             </AuthWrapper>
           } />
           

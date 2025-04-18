@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import apiService from '../services/apiService';
+import { chatService } from '../services/chatService';
 
 export const useBackendState = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -20,8 +21,12 @@ export const useBackendState = () => {
           
           // Optional: Validate token by pinging an auth endpoint
           try {
-            await apiService.get('/users/profile');
+            await apiService.get('/auth/me');
             console.log("Session validated for:", userData.email);
+            
+            // Initialize socket connection
+            chatService.initSocket(token);
+            
           } catch (err) {
             console.error("Invalid session, clearing stored data:", err);
             localStorage.removeItem('user');
@@ -44,6 +49,11 @@ export const useBackendState = () => {
     };
     
     validateSession();
+    
+    return () => {
+      // Cleanup socket connection on unmount
+      chatService.closeSocket();
+    };
   }, []);
   
   const login = async (email, password) => {
@@ -58,6 +68,10 @@ export const useBackendState = () => {
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
         setCurrentUser(response.user);
+        
+        // Initialize socket connection
+        chatService.initSocket(response.token);
+        
         console.log("Login successful for:", email);
       }
       
@@ -90,6 +104,10 @@ export const useBackendState = () => {
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
         setCurrentUser(response.user);
+        
+        // Initialize socket connection
+        chatService.initSocket(response.token);
+        
         console.log("Registration successful for:", email);
       }
       
@@ -106,6 +124,10 @@ export const useBackendState = () => {
   
   const logout = () => {
     console.log("Logging out user:", currentUser?.email);
+    
+    // Close socket connection
+    chatService.closeSocket();
+    
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     setCurrentUser(null);
@@ -149,6 +171,7 @@ export const useBackendState = () => {
     register,
     logout,
     updateProfile,
+    chatService,
     apiService
   };
 };

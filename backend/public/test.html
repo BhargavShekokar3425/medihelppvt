@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Test Page</h1>
+    <div class="container">
+        <div class="card">
+            <h2>Health Check</h2>
+            <button id="healthCheck">Test API Health</button>
+            <pre id="healthCheckResult">Results will appear here...</pre>
+        </div>
+        
+        <div class="card">
+            <h2>Login Test</h2>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" value="patient@example.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" value="password123">
+            </div>
+            <button id="loginTest">Test Login</button>
+            <pre id="loginTestResult">Results will appear here...</pre>
+        </div>
+        
+        <div class="card">
+            <h2>Authentication Test</h2>
+            <p>Tests if the API can accept a token</p>
+            <button id="authTest">Test Auth</button>
+            <pre id="authTestResult">Results will appear here...</pre>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiUrl = 'http://localhost:5000/api';
+            
+            // Health check
+            document.getElementById('healthCheck').addEventListener('click', async () => {
+                const resultEl = document.getElementById('healthCheckResult');
+                try {
+                    resultEl.textContent = 'Testing...';
+                    const response = await fetch(`${apiUrl}/health`);
+                    const data = await response.json();
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                } catch (error) {
+                    resultEl.textContent = `Error: ${error.message}`;
+                }
+            });
+            
+            // Login test
+            document.getElementById('loginTest').addEventListener('click', async () => {
+                const resultEl = document.getElementById('loginTestResult');
+                try {
+                    resultEl.textContent = 'Testing...';
+                    const email = document.getElementById('email').value;
+                    const password = document.getElementById('password').value;
+                    
+                    const response = await fetch(`${apiUrl}/auth/login`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email, password })
+                    });
+                    
+                    const data = await response.json();
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                    
+                    // Store token for auth test
+                    if (data.token) {
+                        localStorage.setItem('apiTestToken', data.token);
+                    }
+                } catch (error) {
+                    resultEl.textContent = `Error: ${error.message}`;
+                }
+            });
+            
+            // Auth test
+            document.getElementById('authTest').addEventListener('click', async () => {
+                const resultEl = document.getElementById('authTestResult');
+                try {
+                    resultEl.textContent = 'Testing...';
+                    const token = localStorage.getItem('apiTestToken');
+                    
+                    if (!token) {
+                        resultEl.textContent = 'No token found. Please login first.';
+                        return;
+                    }
+                    
+                    const response = await fetch(`${apiUrl}/auth/me`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                } catch (error) {
+                    resultEl.textContent = `Error: ${error.message}`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

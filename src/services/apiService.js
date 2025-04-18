@@ -7,12 +7,20 @@ const axiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  // Important for CORS issues
+  withCredentials: false
 });
+
+// Log configuration for debugging
+console.log('API Service configured with URL:', API_URL);
 
 // Request interceptor for adding auth token
 axiosInstance.interceptors.request.use(
   (config) => {
+    // Log the request for debugging
+    console.log(`Making request to: ${config.method?.toUpperCase()} ${config.url}`);
+    
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -20,6 +28,7 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
@@ -27,80 +36,80 @@ axiosInstance.interceptors.request.use(
 // Response interceptor for handling errors
 axiosInstance.interceptors.response.use(
   (response) => {
+    // Log successful response for debugging
+    console.log(`Response from ${response.config.url}:`, response.status);
     return response.data;  // This ensures we directly get the data from the response
   },
   (error) => {
-    console.error('API Error:', error.response?.data || error.message);
+    // Detailed error logging for debugging
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('Response error:', {
+        data: error.response.data,
+        status: error.response.status,
+        headers: error.response.headers,
+        url: error.config.url
+      });
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('Network error - no response received:', {
+        request: error.request,
+        url: error.config?.url
+      });
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Request configuration error:', error.message);
+    }
+    
+    // Handle unauthorized access (expired or invalid token)
     if (error.response && error.response.status === 401) {
-      // Handle unauthorized access
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      
+      // Redirect to login only if not already on login page
+      if (!window.location.pathname.includes('/signup')) {
+        console.log('Redirecting to login page due to 401 error');
+        window.location.href = '/signup';
+      }
     }
-    return Promise.reject(error.response?.data || error);
+    
+    // Enhanced error object
+    const enhancedError = new Error(
+      error.response?.data?.message || 
+      error.response?.data?.error || 
+      error.message || 
+      'Unknown API error'
+    );
+    enhancedError.status = error.response?.status;
+    enhancedError.data = error.response?.data;
+    
+    return Promise.reject(enhancedError);
   }
 );
 
 const apiService = {
   get: async (endpoint, options = {}) => {
     try {
-      console.log(`Sending GET to ${endpoint} with options:`, options);
-      
-      // Fix: Ensure parameters are sent correctly
-      const config = { ...options };
-      if (options.params) {
-        config.params = { ...options.params };
-      }
-      
-      const response = await axiosInstance.get(endpoint, config);
-      console.log(`Response from ${endpoint}:`, response);
-      return response;
+      return await axiosInstance.get(endpoint, options);
     } catch (error) {
       console.error(`GET ${endpoint} error:`, error);
-      // Enhance error handling
-      const errorMessage = error.response?.data?.message || error.message || 'API request failed';
-      const enhancedError = new Error(errorMessage);
-      enhancedError.status = error.response?.status;
-      enhancedError.data = error.response?.data;
-      throw enhancedError;
+      throw error;
     }
   },
   
   post: async (endpoint, data = {}) => {
     try {
-      console.log(`Sending POST to ${endpoint}:`, data);
-      const response = await axiosInstance.post(endpoint, data);
-      console.log(`Response from ${endpoint}:`, response);
-      return response;
+      return await axiosInstance.post(endpoint, data);
     } catch (error) {
-      // Enhanced error logging and handling
-      if (error.response) {
-        // The server responded with a status code outside the 2xx range
-        console.error(`POST ${endpoint} error:`, {
-          status: error.response.status,
-          data: error.response.data,
-          headers: error.response.headers
-        });
-      } else if (error.request) {
-        // The request was made but no response was received
-        console.error(`POST ${endpoint} no response:`, error.request);
-      } else {
-        // Something happened in setting up the request
-        console.error(`POST ${endpoint} error:`, error.message);
-      }
-      
-      // Create better error object for client code
-      const errorMessage = error.response?.data?.message || error.message || 'API request failed';
-      const enhancedError = new Error(errorMessage);
-      enhancedError.status = error.response?.status;
-      enhancedError.data = error.response?.data;
-      throw enhancedError;
+      console.error(`POST ${endpoint} error:`, error);
+      throw error;
     }
   },
   
   put: async (endpoint, data = {}) => {
     try {
-      const response = await axiosInstance.put(endpoint, data);
-      return response;
+      return await axiosInstance.put(endpoint, data);
     } catch (error) {
       console.error(`PUT ${endpoint} error:`, error);
       throw error;
@@ -109,8 +118,7 @@ const apiService = {
   
   delete: async (endpoint) => {
     try {
-      const response = await axiosInstance.delete(endpoint);
-      return response;
+      return await axiosInstance.delete(endpoint);
     } catch (error) {
       console.error(`DELETE ${endpoint} error:`, error);
       throw error;
@@ -135,5 +143,10 @@ const apiService = {
     return user?.role;
   }
 };
+
+// Test the API connectivity when this module loads
+apiService.get('/health')
+  .then(response => console.log('API health check successful:', response))
+  .catch(err => console.warn('API health check failed:', err.message));
 
 export default apiService;
