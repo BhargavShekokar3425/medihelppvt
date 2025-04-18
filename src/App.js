@@ -4,7 +4,7 @@ import firebaseConfig from "./firebase/config";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import UserProfile from "./pages/UserProfile";
 import Appointments from './pages/Appointments';
-
+import AppointmentScheduler from "./components/AppointmentScheduler";
 
 import Reviews from "./pages/Reviews";
 import PrescriptionMain from "./pages/Prescription_Hub";
@@ -42,6 +42,7 @@ function App() {
             <Route path="/doctors" element={<Doctors />} />
             <Route path="/sos" element={<h1>SOS Page</h1>} />
             <Route path="/appointments" element={<Appointments />} />
+            <Route path="/scheduler" element={<AppointmentScheduler />} />
             <Route path="/docanswers" element={<DocAnswers />} />
             <Route path="/prescription-hub" element={<PrescriptionMain />} />
             <Route path="/reviews" element={<Reviews />} />

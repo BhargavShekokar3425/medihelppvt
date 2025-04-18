@@ -77,9 +77,9 @@ alt="Placeholder"/>
 className="bd-placeholder-img rounded-circle" 
 width="140" 
 height="140" 
-src="/assets/male fdoc.jpeg" 
+src="/assets/cutu.jpeg" 
 alt="Placeholder"/>  
-  <h2 class="fw-normal">Dr. Shreyash Singh</h2>
+  <h2 class="fw-normal">Dr. Shreya Singh</h2>
   <p><strong>Degree:</strong> MBBS, MD Psychiatry</p>
   <p><strong>Availability:</strong> Saturday, 10:00 AM - 12:00 PM</p>
 </div>
@@ -89,7 +89,7 @@ alt="Placeholder"/>
 className="bd-placeholder-img rounded-circle" 
 width="140" 
 height="140" 
-src="/assets/doc.jpeg" 
+src="/assets/vcutu.jpg" 
 alt="Placeholder"/>  
           <h2 class="fw-normal">Doctors from Goyal Hospital</h2>
           <p class="mb-1"><strong>Degree:</strong> MBBS, MS OBG</p>

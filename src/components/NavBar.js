@@ -29,18 +29,18 @@ const NavBar = () => {
           <img src="/assets/medicine.svg" width="47" alt="Prescription Hub" className="nav-icon"/>
           <div>Prescription Hub</div> 
         </Link>
+
+        <Link className="p-2 text-dark spl_text" style={{ fontWeight: "bolder" }} to="/community-forum">
+          <img src="/assets/DocExchange.svg" width="47" alt="Community Forum" className="nav-icon" />
+          <div>DocExchange</div>
+        </Link>
+
         <Link className="p-2 text-dark spl_text" style={{ fontWeight: "bolder" }} to="/reviews">
           <img src="/assets/popular-hc.png" width="47" alt="Reviews" className="nav-icon"/>
           <div>Reviews</div> 
         </Link>
-        {/* <Link className="p-2 text-dark spl_text" style={{ fontWeight: "bolder" }} to="/forums">
-          <img src="/assets/community-forums.png" width="47" alt="Community Forums" className="nav-icon"/>
-          <div>Community Forums</div> 
-        </Link> */}
-        <Link className="p-2 text-dark spl_text" style={{ fontWeight: "bolder" }} to="/community-forum">
-          <img src="/assets/community-forums.png" width="47" alt="Community Forum" className="nav-icon" />
-          <div>Community Forum</div>
-        </Link>
+        
+       
       </nav>
     </div>
   );
