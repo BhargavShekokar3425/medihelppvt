@@ -1,54 +1,17 @@
-// Import mock services as a fallback
-import { 
-  mockAuth, 
-  mockFirestore, 
-  mockStorage, 
-  serverTimestamp as mockServerTimestamp,
-  arrayUnion as mockArrayUnion
-} from './mockServices';
+// This file now provides mock services instead of Firebase
+import { mockAuth, mockFirestore, mockStorage } from './mockServices';
 
-// Configuration
+// Export mock services
+export const auth = mockAuth;
+export const db = mockFirestore;
+export const storage = mockStorage;
+export const serverTimestamp = () => new Date();
+export const arrayUnion = (element) => [element];
+export const usingMockServices = true;
+
 const firebaseConfig = {
-  apiKey: "AIzaSyCfJyJ7S88N0AxRVF_h4xdaUJLzwH6MOUY",
-  authDomain: "medihelppvt.firebaseapp.com",
-  projectId: "medihelppvt",
-  storageBucket: "medihelppvt.firebasestorage.app",
-  messagingSenderId: "969041510083",
-  appId: "1:969041510083:web:ba7010c792f5bf6c086c76",
-  measurementId: "G-094H11EX0F"
+  apiKey: "mock-api-key",
+  projectId: "mock-project-id",
 };
 
-let auth, db, storage, serverTimestamp, arrayUnion;
-let usingMockServices = false;
-
-try {
-  // Try to import Firebase
-  const { initializeApp } = require('firebase/app');
-  const { getAuth } = require('firebase/auth');
-  const { getFirestore } = require('firebase/firestore');
-  const { getStorage } = require('firebase/storage');
-  const { serverTimestamp: fbServerTimestamp, arrayUnion: fbArrayUnion } = require('firebase/firestore');
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
-  serverTimestamp = fbServerTimestamp;
-  arrayUnion = fbArrayUnion;
-  
-  console.log("Using actual Firebase services");
-} catch (error) {
-  console.warn("Firebase not available, using mock services", error);
-  
-  // Use mocks instead
-  auth = mockAuth;
-  db = mockFirestore;
-  storage = mockStorage;
-  serverTimestamp = mockServerTimestamp;
-  arrayUnion = mockArrayUnion;
-  usingMockServices = true;
-}
-
-export { auth, db, storage, serverTimestamp, arrayUnion, usingMockServices };
 export default firebaseConfig;

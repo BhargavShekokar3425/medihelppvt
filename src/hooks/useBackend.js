@@ -4,6 +4,7 @@ import { authService } from '../services/authService';
 import { chatService } from '../services/chatService';
 import { prescriptionService } from '../services/prescriptionService';
 import { reviewService } from '../services/reviewService';
+import apiService from '../services/apiService';
 
 export const useBackend = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -11,7 +12,7 @@ export const useBackend = () => {
   const [error, setError] = useState(null);
   
   // Always call useNavigate unconditionally
-  let navigate = useNavigate();
+  const navigate = useNavigate();
   
   // Check for user on mount
   useEffect(() => {
@@ -87,11 +88,11 @@ export const useBackend = () => {
     }
   };
   
-  const sendMessage = async (conversationId, senderId, text, attachments) => {
+  const sendMessage = async (conversationId, text, attachments) => {
     setError(null);
     
     try {
-      return await chatService.sendMessage(conversationId, senderId, text, attachments);
+      return await chatService.sendMessage(conversationId, text, attachments);
     } catch (error) {
       setError(error.message);
       throw error;
@@ -170,6 +171,63 @@ export const useBackend = () => {
     }
   };
   
+  // General API methods 
+  const apiGet = async (endpoint, params) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const response = await apiService.get(endpoint, params);
+      return response;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const apiPost = async (endpoint, data) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const response = await apiService.post(endpoint, data);
+      return response;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const apiPut = async (endpoint, data) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const response = await apiService.put(endpoint, data);
+      return response;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const apiDelete = async (endpoint) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const response = await apiService.delete(endpoint);
+      return response;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   return {
     currentUser,
     loading,
@@ -193,7 +251,12 @@ export const useBackend = () => {
     addReview,
     getDoctorReviews,
     getTopRatedDoctors: reviewService.getTopRatedDoctors,
-    updateReview: reviewService.updateReview
+    updateReview: reviewService.updateReview,
+    // General API methods
+    apiGet,
+    apiPost,
+    apiPut,
+    apiDelete
   };
 };
 

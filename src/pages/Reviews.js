@@ -1,214 +1,523 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useBackendContext } from "../contexts/BackendContext";
+import { reviewService } from "../services/reviewService";
 
-
-function ReviewComponent() { 
+const Reviews = () => {
   const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const { currentUser } = useBackendContext();
+  
+  // New review form state
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [doctors, setDoctors] = useState([]);
+  const [reviewType, setReviewType] = useState('doctor');
+  const [newReview, setNewReview] = useState({
+    rating: 5,
+    title: "",
+    content: ""
+  });
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  // Fetch all public reviews
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        setLoading(true);
+        const response = await reviewService.getAllReviews(1, 10);
+        setReviews(response);
+        setHasMore(response.length === 10);
+        setLoading(false);
+      } catch (err) {
+        setError("Failed to load reviews. Please try again later.");
+        setLoading(false);
+      }
+    };
 
-    const name = event.target.name.value;
-    const reviewText = event.target.review.value;
-    const rating = event.target.rating.value;
+    // Fetch available doctors for the review form
+    const fetchDoctors = async () => {
+      try {
+        const response = await fetchAvailableDoctors();
+        setDoctors(response);
+      } catch (err) {
+        console.error("Failed to fetch doctors:", err);
+      }
+    };
 
-    if (!rating) {
-      alert("Please select a star rating");
+    fetchReviews();
+    fetchDoctors();
+  }, []);
+
+  // Mock function to fetch doctors - replace with actual API call
+  const fetchAvailableDoctors = async () => {
+    // In a real app, this would come from an API
+    return [
+      { id: 'd1', name: 'Dr. Neha Sharma', specialization: 'Cardiologist' },
+      { id: 'd2', name: 'Dr. Shikha Chibber', specialization: 'Neurologist' },
+      { id: 'd3', name: 'Dr. Mohan Singh', specialization: 'Pediatrician' }
+    ];
+  };
+
+  // Load more reviews when scrolling
+  const loadMoreReviews = async () => {
+    if (!hasMore || loading) return;
+    
+    try {
+      setLoading(true);
+      const nextPage = page + 1;
+      const moreReviews = await reviewService.getAllReviews(nextPage, 10);
+      
+      if (moreReviews.length === 0) {
+        setHasMore(false);
+      } else {
+        setReviews([...reviews, ...moreReviews]);
+        setPage(nextPage);
+      }
+      setLoading(false);
+    } catch (err) {
+      setError("Failed to load more reviews.");
+      setLoading(false);
+    }
+  };
+
+  // Debug function to test the review API directly
+  const debugReviewApi = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log("Testing direct API call with:", {
+        reviewType: reviewType,
+        doctorId: selectedDoctor?.id,
+        rating: newReview.rating,
+        title: newReview.title,
+        content: newReview.content
+      });
+      
+      const { apiService } = useBackendContext();
+      
+      // Attempt direct API call
+      const response = await apiService.post('/reviews', {
+        reviewType: reviewType,
+        doctorId: selectedDoctor?.id,
+        rating: newReview.rating,
+        title: newReview.title,
+        content: newReview.content
+      });
+      
+      console.log("Direct API call succeeded:", response);
+      setNewReview({ rating: 5, title: "", content: "" });
+      setShowReviewForm(false);
+      
+      // Update the reviews list
+      const updatedReviews = await reviewService.getAllReviews(1, 10);
+      setReviews(updatedReviews);
+    } catch (error) {
+      console.error("Debug API error:", error);
+      setError(`API Debug Error: ${error.message || "Unknown error"}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle new review submission
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (reviewType === 'doctor' && !selectedDoctor) {
+      setError("Please select a doctor to review.");
       return;
     }
 
-    const newReview = {
-      name,
-      rating,
-      reviewText,
-    };
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log("Submitting review:", {
+        type: reviewType,
+        doctorId: selectedDoctor?.id,
+        review: newReview
+      });
+      
+      if (reviewType === 'doctor') {
+        await reviewService.addDoctorReview(selectedDoctor.id, newReview);
+      } else {
+        await reviewService.addAppReview(newReview);
+      }
+      
+      // Update the reviews list
+      const updatedReviews = await reviewService.getAllReviews(1, 10);
+      setReviews(updatedReviews);
+      
+      // Reset form
+      setNewReview({ rating: 5, title: "", content: "" });
+      setSelectedDoctor(null);
+      setShowReviewForm(false);
+    } catch (err) {
+      console.error("Review submission error:", err);
+      setError(`Failed to submit review: ${err.message || "Please try again."}`);
+      
+      // If regular submission fails, try the debug method
+      if (window.confirm("Review submission failed. Would you like to try debug mode?")) {
+        debugReviewApi();
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    setReviews([newReview, ...reviews]);
-    event.target.reset(); // Reset the form
+  // Format date for display
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  // Render star rating
+  const renderStars = (rating) => {
+    return Array(5).fill(0).map((_, i) => (
+      <span key={i} className={i < rating ? "text-warning" : "text-muted"}>
+        ★
+      </span>
+    ));
   };
 
   return (
-   
-      <div className="container">
-     
-    
-      <div className="jumbotron gradient-background p-4 p-md-5 text-white rounded bg-dark" style={{marginBottom: "32px"}} >
-        <div className="col-md-6 px-0 " style={{color: "black"}}>
-          <h1 className="display-4 font-italic" >Reviews</h1>
-          <p className="lead my-3">We'd love to hear about your experience! Your feedback helps us enhance our services and create a better experience for you and others. Share your thoughts with us!</p>
+    <div className="container py-5">
+      <div className="jumbotron gradient-background p-4 p-md-5 text-white rounded bg-dark mb-4">
+        <div className="row">
+          <div className="col-md-8 px-0" style={{ color: "black" }}>
+            <h1 className="display-4 font-weight-bold">Reviews & Feedback</h1>
+            <p className="lead my-3">
+              Read what our users say about doctors and our services.
+              Your feedback helps us improve and helps others find the right healthcare provider.
+            </p>
+          </div>
+          <div className="col-md-4 d-flex align-items-center justify-content-md-end">
+            {currentUser && (
+              <button 
+                onClick={() => setShowReviewForm(true)} 
+                className="btn btn-primary btn-lg"
+              >
+                <i className="fas fa-pen me-2"></i> Write a Review
+              </button>
+            )}
+          </div>
         </div>
       </div>
-      {/* <!-- COMMENT SECTION--> */}
-      <div className="container mt-5">
-        <h2>Leave  a Review</h2>
-        <hr/>
-        <form id="review-form" onSubmit={handleSubmit}>
-            <div className="mb-3">
-                <h5><label htmlFor="name" className="form-label">Name</label></h5>
-                <input type="text" className="form-control" id="name" required/>
-            </div>
-            <div className="mb-3">
-                <h5><label htmlFor="review" className="form-label">Review</label></h5>
-                <textarea className="form-control" id="review" rows="3" required></textarea>
-            </div>
-            <b><span><h5> Stars:</h5> </span></b>
-            <div className="mb-3 star-rating">
-                
-                <input type="radio" name="rating" id="star5" value="5"/><label htmlFor="star5">★</label>
-                <input type="radio" name="rating" id="star4" value="4"/><label htmlFor="star4">★</label>
-                <input type="radio" name="rating" id="star3" value="3"/><label htmlFor="star3">★</label>
-                <input type="radio" name="rating" id="star2" value="2"/><label htmlFor="star2">★</label>
-                <input type="radio" name="rating" id="star1" value="1"/><label htmlFor="star1">★</label>
-               
-            </div>
-            <br/>
-        <button  type="submit" className="btn btn-primary gradient-bg">Submit</button>   
-        </form>
 
-        <h3 className="mt-4">User Reviews</h3>
-        <div id="reviews">
-        {reviews.map((review, index) => (
-          <div key={index} className="review-card">
-            <strong>{review.name}</strong>
-            <br />
-            {"★".repeat(review.rating)}
-            <br />
-            {review.reviewText}
-          </div>
-        ))}
-
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+          <button 
+            type="button" 
+            className="btn-close float-end" 
+            onClick={() => setError(null)}
+          ></button>
         </div>
-        <hr/>
-         
-     </div>
-     
-   
-    
-    {/* <!-- HELP SECTION--> */}
-    <main role="main" className="container">
+      )}
+
+      {/* Review Form Modal */}
+      {showReviewForm && (
+        <div className="modal d-block" tabIndex="-1" role="dialog" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg" role="document">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Write a Review</h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowReviewForm(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <form onSubmit={handleReviewSubmit}>
+                  <div className="mb-3">
+                    <label className="form-label">What are you reviewing?</label>
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="radio"
+                        name="reviewType"
+                        id="reviewTypeDoctor"
+                        value="doctor"
+                        checked={reviewType === 'doctor'}
+                        onChange={() => setReviewType('doctor')}
+                      />
+                      <label className="form-check-label" htmlFor="reviewTypeDoctor">
+                        A Doctor
+                      </label>
+                    </div>
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="radio"
+                        name="reviewType"
+                        id="reviewTypeApp"
+                        value="app"
+                        checked={reviewType === 'app'}
+                        onChange={() => setReviewType('app')}
+                      />
+                      <label className="form-check-label" htmlFor="reviewTypeApp">
+                        MediHelp App
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {reviewType === 'doctor' && (
+                    <div className="mb-3">
+                      <label className="form-label">Select Doctor</label>
+                      <select 
+                        className="form-select"
+                        value={selectedDoctor?.id || ''}
+                        onChange={(e) => {
+                          const doctor = doctors.find(d => d.id === e.target.value);
+                          setSelectedDoctor(doctor);
+                        }}
+                        required={reviewType === 'doctor'}
+                      >
+                        <option value="">Choose a doctor...</option>
+                        {doctors.map(doctor => (
+                          <option key={doctor.id} value={doctor.id}>
+                            {doctor.name} - {doctor.specialization}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  
+                  <div className="mb-3">
+                    <label className="form-label">Rating</label>
+                    <div>
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <span 
+                          key={star} 
+                          onClick={() => setNewReview({...newReview, rating: star})}
+                          className={`star-rating ${newReview.rating >= star ? 'active' : ''}`}
+                          style={{
+                            cursor: 'pointer', 
+                            fontSize: '2rem', 
+                            color: newReview.rating >= star ? '#FFD700' : '#ccc',
+                            marginRight: '5px'
+                          }}
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <label className="form-label">Review Title</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      value={newReview.title}
+                      onChange={(e) => setNewReview({...newReview, title: e.target.value})}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="mb-3">
+                    <label className="form-label">Your Review</label>
+                    <textarea 
+                      className="form-control" 
+                      rows="5"
+                      value={newReview.content}
+                      onChange={(e) => setNewReview({...newReview, content: e.target.value})}
+                      required
+                    ></textarea>
+                  </div>
+                  
+                  <div className="d-flex justify-content-end">
+                    <button 
+                      type="button" 
+                      className="btn btn-outline-secondary me-2"
+                      onClick={() => setShowReviewForm(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      ) : null}
+                      Submit Review
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reviews List */}
       <div className="row">
-        <div className="col-md-8 blog-main">
-          <h3 className="pb-4 mb-4 font-italic border-bottom">Getting You Help from:
-          </h3>
-          <ul className="list-unstyled mt-2 hospital">
-
-            <li >📍 <strong>PHC (IIT Jodhpur)</strong> –
-            <a target="_blank" rel="noopener noreferrer"
-                  onMouseOver={(e) => {
-                    e.target.style.color = "#007bff";
-                    e.target.parentElement.style.transform = "translateY(-5px)";
-                    e.target.parentElement.style.fontWeight = "bold";
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.color = "black";
-                    e.target.parentElement.style.transform = "translateY(0px)";
-                    e.target.parentElement.style.fontWeight = "normal";
-                  }}
-                  style={{ textDecoration: "none", color: "black", transition: "color 0.3s ease-in-out" }}
-              href="https://www.google.com/maps?sca_esv=4fe20b8700bc3141&uact=5&gs_lp=Egxnd3Mtd2l6LXNlcnAiCHBoYyBpaXRqMg4QLhiABBjHARiOBRivATICECYyCxAAGIAEGIYDGIoFMgsQABiABBiGAxiKBTIIEAAYgAQYogQyBRAAGO8FMgUQABjvBTIdEC4YgAQYxwEYjgUYrwEYlwUY3AQY3gQY4ATYAQJI-A9QrAVYlg5wAXgAkAEAmAHjAaAB0QqqAQUwLjcuMbgBA8gBAPgBAZgCCaACiQuoAhTCAhQQLhiABBiRAhi0AhiKBRjqAtgBAcICFBAAGIAEGJECGLQCGIoFGOoC2AEBwgIaEC4YgAQYkQIYtAIYxwEYigUY6gIYrwHYAQHCAhQQABiABBjjBBi0AhjpBBjqAtgBAcICEBAAGAMYtAIY6gIYjwHYAQLCAhAQLhgDGLQCGOoCGI8B2AECwgILEC4YgAQYkQIYigXCAg4QABiABBixAxiDARiKBcICCBAAGIAEGLEDwgILEAAYgAQYsQMYgwHCAgUQLhiABMICGhAuGIAEGJECGIoFGJcFGNwEGN4EGOAE2AECwgILEAAYgAQYkQIYigXCAgoQABiABBhDGIoFwgIOEC4YgAQYsQMY0QMYxwHCAgUQABiABMICFBAuGIAEGJECGMcBGIoFGI4FGK8BwgINEAAYgAQYsQMYgwEYCsICDRAAGIAEGEMYyQMYigXCAgsQABiABBiSAxiKBcICIxAuGIAEGJECGMcBGIoFGI4FGK8BGJcFGNwEGN4EGOAE2AECwgIOEAAYgAQYkQIYsQMYigXCAgYQABgWGB6YAwfxBVFJapm7eZVFugYECAEYB7oGBggCEAEYCpIHBTEuNy4xoAevRLIHBTAuNy4xuAeCCw&um=1&ie=UTF-8&fb=1&gl=in&sa=X&geocode=KV-AAHqF60E5McGDd5AvH_5I&daddr=F4J9%2BFR8,+Unnamed+Road,+Jheepasani,+Vinayakpura,+Rajasthan+342027">F4J9+FR8, Unnamed Road, Jheepasani, Vinayakpura, Rajasthan 342027 
-                </a>
-            </li>
-
-            
-            <li>📍 <strong>AIIMS Jodhpur</strong> – 
-            <a target="_blank" rel="noopener noreferrer"
-              onMouseOver={(e) => {
-                e.target.style.color = "#007bff";
-                e.target.parentElement.style.transform = "translateY(-5px)";
-                e.target.parentElement.style.fontWeight = "bold";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.color = "black";
-                e.target.parentElement.style.transform = "translateY(0px)";
-                e.target.parentElement.style.fontWeight = "normal";
-              }}
-              style={{ textDecoration: "none", color: "black", transition: "color 0.3s ease-in-out" }}
-            href="https://www.google.com/maps?s=web&sca_esv=4fe20b8700bc3141&lqi=ChJhaWltcyBqZGggbG9jYXRpb25I9eep78atgIAIWhEQABABGAAiCWFpaW1zIGpkaJIBE2dvdmVybm1lbnRfaG9zcGl0YWyqAT0QASoJIgVhaWltcygAMh8QASIbvr7gi9gzG-dyigZ9BJXs3Dz-wPt8pYh0VWKVMg0QAiIJYWlpbXMgamRo&vet=12ahUKEwi6m4D5tZ2MAxVGxTgGHQ1qEpkQ1YkKegQIJRAB..i&cs=1&um=1&ie=UTF-8&fb=1&gl=in&sa=X&geocode=KeNFx_9ii0E5MTRkfDnDT4td&daddr=marudar+hi+industrial+area+second+phase,+Basni,+Jodhpur,+Rajasthan+342005">Marudar hi industrial area second phase, Basni, Jodhpur, Rajasthan 342005 </a></li>
-
-            <li >📍 <strong>MediPulse</strong> –
-                        <a target="_blank" rel="noopener noreferrer"
-              onMouseOver={(e) => {
-                e.target.style.color = "#007bff";
-                e.target.parentElement.style.transform = "translateY(-5px)";
-                e.target.parentElement.style.fontWeight = "bold";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.color = "black";
-                e.target.parentElement.style.transform = "translateY(0px)";
-                e.target.parentElement.style.fontWeight = "normal";
-              }}
-              style={{ textDecoration: "none", color: "black", transition: "color 0.3s ease-in-out" }}
-               href="https://www.google.com/maps?s=web&lqi=ChFqb2RocHVyIGhvc3BpdGFsc0ip1qCYq6qAgAhaHRABGAAYASIRam9kaHB1ciBob3NwaXRhbHMqAggDkgEQZ2VuZXJhbF9ob3NwaXRhbKoBUwoIL20vMGhwbnIQASoNIglob3NwaXRhbHMoADIfEAEiG-3TXt6EU4h8pujoe6W4EXS1NOY6p962ZhXdujIVEAIiEWpvZGhwdXIgaG9zcGl0YWxz&vet=12ahUKEwjt3pPPtJ2MAxV-zDgGHVwYLZEQ1YkKegQIKhAB..i&cs=1&um=1&ie=UTF-8&fb=1&gl=in&sa=X&geocode=KVEz8Szxi0E5Mc2642P9Ekse&daddr=E4,+MIA+,+Basni+II+Phase,Opposite,+AIIMS+Link+Rd,+Jodhpur,+Rajasthan+342005">E4, MIA , Basni II Phase,Opposite, AIIMS Link Rd, Jodhpur, Rajasthan 342005</a>
-              </li>
-
-            <li >📍 <strong>Goyal Hospital</strong> – 
-            <a target="_blank" rel="noopener noreferrer"
-            onMouseOver={(e) => {
-              e.target.style.color = "#007bff";
-              e.target.parentElement.style.transform = "translateY(-5px)";
-              e.target.parentElement.style.fontWeight = "bold";
-            }}
-            onMouseOut={(e) => {
-              e.target.style.color = "black";
-              e.target.parentElement.style.transform = "translateY(0px)";
-              e.target.parentElement.style.fontWeight = "normal";
-            }}
-            style={{ textDecoration: "none", color: "black", transition: "color 0.3s ease-in-out" }}
-            href="https://www.google.com/maps/dir//961%2F3,+Residency+Rd,+Sardarpura,+Jodhpur,+Rajasthan+342001/@26.2723621,72.9257105,12z/data=!4m8!4m7!1m0!1m5!1m1!1s0x39418c3a67373709:0xd98f730ae41514ee!2m2!1d73.008112!2d26.2723856?entry=ttu&g_ep=EgoyMDI1MDMxOS4yIKXMDSoASAFQAw%3D%3D">961/3, Residency Rd, Sardarpura, Jodhpur, Rajasthan 342001 </a></li>
-           
-          </ul>
-           
-    
-    
-    
+        <div className="col-lg-8">
+          <h2 className="mb-4">Latest Reviews</h2>
+          
+          {loading && reviews.length === 0 ? (
+            <div className="text-center my-5">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="mt-2">Loading reviews...</p>
+            </div>
+          ) : reviews.length === 0 ? (
+            <div className="alert alert-info">
+              No reviews yet. Be the first to share your experience!
+            </div>
+          ) : (
+            <div className="reviews-list">
+              {reviews.map((review) => (
+                <div key={review.id} className="card mb-4 shadow-sm">
+                  <div className="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                      <h5 className="mb-0">{review.title}</h5>
+                      <div>{renderStars(review.rating)}</div>
+                    </div>
+                    <div>
+                      <span className="badge bg-secondary me-2">
+                        {review.reviewType === 'doctor' ? 'Doctor Review' : 'App Review'}
+                      </span>
+                      <small className="text-muted">
+                        {formatDate(review.createdAt)}
+                      </small>
+                    </div>
+                  </div>
+                  <div className="card-body">
+                    <p className="card-text">{review.content}</p>
+                    
+                    {review.reviewType === 'doctor' && review.doctor && (
+                      <div className="doctor-info d-flex align-items-center mt-3">
+                        <img 
+                          src={review.doctor?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.doctor?.name || 'Doctor')}`} 
+                          alt={review.doctor?.name} 
+                          className="rounded-circle me-2"
+                          width="40"
+                          height="40"
+                        />
+                        <div>
+                          <p className="mb-0">
+                            <strong>Doctor: </strong>
+                            <Link to={`/doctors/${review.doctor?.id}`} className="text-decoration-none">
+                              {review.doctor?.name}
+                            </Link>
+                          </p>
+                          <small className="text-muted">
+                            {review.doctor?.specialization}
+                          </small>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <hr />
+                    
+                    <div className="patient-info d-flex align-items-center">
+                      <img 
+                        src={review.author?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.author?.name || 'User')}`} 
+                        alt={review.author?.name} 
+                        className="rounded-circle me-2"
+                        width="30"
+                        height="30"
+                      />
+                      <div>
+                        <small className="text-muted">
+                          Review by 
+                          <strong> {review.author?.name}</strong>
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {hasMore && (
+                <div className="text-center my-4">
+                  <button 
+                    className="btn btn-outline-primary" 
+                    onClick={loadMoreReviews}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    ) : null}
+                    Load More Reviews
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        {/* <!-- /.blog-main --> */}
-    
-        <aside className="col-md-4 blog-sidebar">
-          <div className="p-4 mb-3 bg-light rounded gradient-bg">
-            <h4 className="font-italic text-black">About</h4>
-            <p className="mb-0">MediHelp is your all-in-one medical companion, making healthcare access seamless and convenient.  
-              Schedule doctor appointments, request prescriptions, and manage your health effortlessly with Google Calendar integration.  
-              In emergencies, send out SOS requests instantly. Stay connected with the right medical help—anytime, anywhere.</p>
+
+        {/* Sidebar */}
+        <div className="col-lg-4">
+          <div className="card mb-4 shadow-sm">
+            <div className="card-header bg-primary text-white">
+              <h5 className="mb-0">Top Rated Doctors</h5>
+            </div>
+            <div className="list-group list-group-flush">
+              {doctors.slice(0, 5).map((doctor) => (
+                <Link 
+                  key={doctor.id} 
+                  to={`/doctors/${doctor.id}`} 
+                  className="list-group-item list-group-item-action d-flex align-items-center"
+                >
+                  <img 
+                    src={doctor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.name)}`} 
+                    alt={doctor.name} 
+                    className="rounded-circle me-3"
+                    width="50"
+                    height="50"
+                  />
+                  <div>
+                    <h6 className="mb-0">{doctor.name}</h6>
+                    <small className="text-muted">
+                      {doctor.specialization}
+                    </small>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="card-footer">
+              <Link to="/doctors" className="btn btn-outline-primary w-100">
+                View All Doctors
+              </Link>
+            </div>
           </div>
-    
-    
-        </aside>
-        {/* <!-- /.blog-sidebar --> */}
-    
-      </div> 
-      {/* <!-- /.row --> */}
-    
-    </main>
-    {/* <!-- /.container --> */}
-
-
-    {/* <!-- FontAwesome for Icons --> */}
-
-    <section id="footer" className="blog-footer">
-        <div className="container">
-          <footer className="d-flex flex-wrap justify-content-between align-items-center py-3 my-4 border-top"> 
-            <span className="mb-3 mb-md-0 text-body-secondary">© 2025, MediHelp</span>
-            <ul className="nav col-md-4 justify-content-end list-unstyled d-flex">
-              <li className="ms-3"><a className="text-body-secondary" href="mailto:b23cs1059@iitj.ac.in"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" className="bi bi-google" viewBox="0 0 16 16">
-                <path d="M15.545 6.558a9.4 9.4 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.7 7.7 0 0 1 5.352 2.082l-2.284 2.284A4.35 4.35 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.304a4.8 4.8 0 0 0 0 3.063h.003c.635 1.893 2.405 3.301 4.492 3.301 1.078 0 2.004-.276 2.722-.764h-.003a3.7 3.7 0 0 0 1.599-2.431H8v-3.08z"></path>
-              </svg></a></li>
-              <li className="ms-3"><a className="text-body-secondary" target="_blank" rel="noopener noreferrer" href="https://github.com/BhargavShekokar3425/medihelppvt"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" className="bi bi-github" viewBox="0 0 16 16">
-                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"></path>
-              </svg></a></li>
-
-              <li className="ms-3">
-                <a className="text-body-secondary" target="_blank" rel="noopener noreferrer" href="https://docs.google.com/document/d/1kaEMZjOea6FUKPANczPBNMTDgAuQ4OVyQXSo27-YeuU/edit?usp=sharing">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" className="bi bi-file-earmark-text" viewBox="0 0 16 16">
-                        <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h6.5L14 4.5zM9.5 1.5V5h3l-3-3.5zM3 6h10v1H3V6zm0 2h10v1H3V8zm0 2h7v1H3v-1z"></path>
-                    </svg>
-                </a>
-            </li>
-            </ul>
-          </footer>
+          
+          <div className="card mb-4 shadow-sm">
+            <div className="card-header bg-info text-white">
+              <h5 className="mb-0">Need Medical Help?</h5>
+            </div>
+            <div className="card-body">
+              <p>
+                Connect with our medical professionals or book an appointment now.
+              </p>
+              <div className="d-grid gap-2">
+                <Link to="/docanswers" className="btn btn-outline-info">
+                  <i className="fas fa-comment-medical me-1"></i> Chat with Doctor
+                </Link>
+                <Link to="/appointments" className="btn btn-outline-info">
+                  <i className="fas fa-calendar-check me-1"></i> Book Appointment
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
-      </section>
-</div>
+      </div>
+    </div>
   );
-}
+};
 
-export default ReviewComponent;
+export default Reviews;

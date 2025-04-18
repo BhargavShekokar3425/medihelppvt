@@ -1,0 +1,96 @@
+[
+  {
+    "id": "p1",
+    "email": "patient@example.com",
+    "password": "password123",
+    "name": "Test Patient",
+    "role": "patient",
+    "username": "testpatient",
+    "dob": "1990-01-01",
+    "address": "123 Test St, Test City",
+    "contact": "555-123-4567",
+    "bloodGroup": "O+",
+    "gender": "Male",
+    "allergies": "None"
+  },
+  {
+    "id": "1",
+    "email": "user@example.com",
+    "password": "password",
+    "name": "Test User",
+    "role": "patient",
+    "username": "testuser",
+    "dob": "1990-01-01",
+    "address": "123 Test St",
+    "contact": "555-1234",
+    "bloodGroup": "O+",
+    "gender": "Male",
+    "allergies": "None"
+  },
+  {
+    "id": "d1",
+    "email": "doctor@example.com",
+    "password": "password",
+    "name": "Dr. Neha Sharma",
+    "role": "doctor",
+    "username": "drneha",
+    "specialization": "Cardiology",
+    "experience": "10 years",
+    "avatar": "/assets/femme.jpeg"
+  },
+  {
+    "id": "d2",
+    "email": "shikha@example.com",
+    "password": "password",
+    "name": "Dr. Shikha Chibber",
+    "role": "doctor",
+    "username": "drshikha",
+    "specialization": "Neurology",
+    "experience": "8 years",
+    "avatar": "/assets/fem.jpeg"
+  },
+  {
+    "id": "d3",
+    "email": "ayurvedic@example.com",
+    "password": "password",
+    "name": "Dr. Ayurvedic Specialists",
+    "role": "doctor",
+    "username": "drayurvedic",
+    "specialization": "Ayurveda",
+    "experience": "15 years",
+    "avatar": "/assets/doctorman.avif"
+  },
+  {
+    "id": "d4",
+    "email": "vibha@example.com",
+    "password": "password",
+    "name": "Dr. Vibha Dubey",
+    "role": "doctor",
+    "username": "drvibha",
+    "specialization": "Dermatology",
+    "experience": "12 years",
+    "avatar": "/assets/femmedocie.jpg"
+  },
+  {
+    "id": "d5",
+    "email": "shweta@example.com",
+    "password": "password",
+    "name": "Dr. Shweta Singh",
+    "role": "doctor",
+    "username": "drshweta",
+    "specialization": "Pediatrics",
+    "experience": "7 years",
+    "avatar": "/assets/cutu.jpeg"
+  },
+  {
+    "id": "d6",
+    "email": "misha@example.com",
+    "password": "password",
+    "name": "Dr. Misha Goyal",
+    "role": "doctor",
+    "username": "drmisha",
+    "specialization": "Gynecology",
+    "experience": "9 years",
+    "avatar": "/assets/vcutu.jpg"
+  }
+]
