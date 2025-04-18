@@ -123,7 +123,11 @@ const CommunityForums = () => {
 
   return (
     <div className="container mt-5">
-      <h1>Community Forums</h1>
+       <div className="jumbotron gradient-background p-4 p-md-5 text-white rounded bg-dark" style={{marginBottom: "32px"}} >
+            <div className="col px-0 " style={{color:"black"}}>
+              <h1 className="display-4 font-italic" > DocExchange </h1>
+            </div>
+          </div>
       <input
         type="text"
         placeholder="Search posts..."
@@ -131,7 +135,7 @@ const CommunityForums = () => {
         onChange={(e) => setSearchQuery(e.target.value)}
         className="form-control mb-3"
       />
-      <button className="btn btn-primary mb-3" onClick={() => setShowModal(true)}>
+      <button className="btn btn-primary mb-3 gradient-bg" onClick={() => setShowModal(true)}>
         Create New Post
       </button>
       {filteredPosts.map(post => (
@@ -148,7 +152,7 @@ const CommunityForums = () => {
               <button className="btn btn-danger me-2" onClick={() => toggleDownvote(post.id)}>
                 Downvote ({post.downvotes})
               </button>
-              <button className="btn btn-secondary" onClick={() => setAnswerModal({ show: true, postId: post.id })}>
+              <button className="btn btn-secondary " onClick={() => setAnswerModal({ show: true, postId: post.id })}>
                 Add Answer
               </button>
             </div>
@@ -179,7 +183,7 @@ const CommunityForums = () => {
       {showModal && (
         <NewPostModal
           onClose={() => setShowModal(false)}
-          onSubmit={(newPost) => setPosts([...posts, { ...newPost, id: posts.length + 1, upvotes: 0, downvotes: 0, userUpvoted: false, userDownvoted: false, answers: [], showAnswers: false, comments: [] }])}
+          onSubmit={(newPost) => setPosts([{ ...newPost, id: posts.length + 1, upvotes: 0, downvotes: 0, userUpvoted: false, userDownvoted: false, answers: [], showAnswers: false, comments: [] }, ...posts])}
         />
       )}
       {answerModal.show && (
