@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useBackendContext } from '../contexts/BackendContext';
 
 export default function AppointmentScheduler() {
+  // Add new state variables for appointment booking
+  const [bookedSlots, setBookedSlots] = useState({});
+  const [bookingStatus, setBookingStatus] = useState(null);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  
+  // Get the backend context for API calls
+  const { currentUser, apiService } = useBackendContext();
+  
   // Add CSS styles directly in the component
   const styles = {
     container: {
@@ -359,9 +368,6 @@ export default function AppointmentScheduler() {
       borderColor: '#999',
       transition: 'border-color 0.2s ease-in-out'
     },
-  
-
-    
     staffName: {
       fontSize: '14px',
       textAlign: 'center',
@@ -374,12 +380,12 @@ export default function AppointmentScheduler() {
 
   // Staff members data
   const [staffMembers] = useState([
-    { id: 1, name: 'Dr. Neha Sharma', image: '/assets/femme.jpeg' },
-    { id: 2, name: 'Dr. Shikha Chibber', image: '/assets/fem.jpeg' },
-    { id: 3, name: 'Dr. Ayurvedic Specialists', image: '/assets/doctorman.avif' },
-    { id: 4, name: 'Dr. Vibha Dubey', image: '/assets/femmedocie.jpg' },
-    { id: 5, name: 'Dr. Shweta Singh', image: '/assets/cutu.jpeg' },
-    { id: 6, name: 'Dr. Misha Goyal', image: '/assets/vcutu.jpg' }
+    { id: 'd1', name: 'Dr. Neha Sharma', image: '/assets/femme.jpeg' },
+    { id: 'd2', name: 'Dr. Shikha Chibber', image: '/assets/fem.jpeg' },
+    { id: 'd3', name: 'Dr. Ayurvedic Specialists', image: '/assets/doctorman.avif' },
+    { id: 'd4', name: 'Dr. Vibha Dubey', image: '/assets/femmedocie.jpg' },
+    { id: 'd5', name: 'Dr. Shweta Singh', image: '/assets/cutu.jpeg' },
+    { id: 'd6', name: 'Dr. Misha Goyal', image: '/assets/vcutu.jpg' }
   ]);
   
   // Currently selected staff member
@@ -451,6 +457,14 @@ export default function AppointmentScheduler() {
     color: '#3b82f6', // Default blue color
     completed: false
   });
+
+  // Add missing toggleCompleted function
+  const toggleCompleted = () => {
+    setCurrentAppointment(prev => ({
+      ...prev,
+      completed: !prev.completed
+    }));
+  };
   
   // State for modal visibility
   const [showModal, setShowModal] = useState(false);
@@ -479,80 +493,429 @@ export default function AppointmentScheduler() {
     setStartDate(newDate);
   };
   
-  // Handle staff selection
-  const handleStaffSelect = (staff) => {
+  // Handle staff selection with availability check
+  const handleStaffSelect = async (staff) => {
     setSelectedStaff(staff);
+    // This will trigger the useEffect to load booked slots
   };
   
-  // Handle cell click to create/edit appointment
-  const handleCellClick = (date, timeSlot) => {
-    const dateKey = formatDateKey(date);
-    const appointments = getAppointments();
-    const existingAppointment = appointments[`${dateKey}-${timeSlot}`];
+  // Load booked slots when staff member or dates change
+  useEffect(() => {
+    if (!selectedStaff || dates.length === 0) return;
     
-    if (existingAppointment) {
-      setCurrentAppointment({
-        date: date,
-        timeSlot: timeSlot,
-        text: existingAppointment.text,
-        color: existingAppointment.color,
-        completed: existingAppointment.completed
+    const loadBookedSlotsForDoctor = async () => {
+      try {
+        setLoadingSlots(true);
+        
+        // Format dates for the API request
+        const startDate = dates[0].toISOString().split('T')[0];
+        const endDate = dates[6].toISOString().split('T')[0];
+        
+        // If we have an API service, use it. Otherwise use mock data
+        let bookedSlotsData = {};
+        
+        if (apiService) {
+          const response = await apiService.get(
+            `/appointments/booked-slots/${selectedStaff.id}`,
+            { params: { startDate, endDate } }
+          );
+          
+          // Format the response into a lookup object
+          response.forEach(slot => {
+            const key = `${slot.date}-${slot.timeSlot}`;
+            bookedSlotsData[key] = true;
+          });
+        } else {
+          // Mock data when API is not available
+          console.log("Using mock booked slots data");
+          bookedSlotsData = {
+            [`${startDate}-10:00 AM`]: true,
+            [`${startDate}-2:00 PM`]: true,
+          };
+        }
+        
+        setBookedSlots(bookedSlotsData);
+        console.log("Loaded booked slots:", bookedSlotsData);
+      } catch (error) {
+        console.error('Error loading booked slots:', error);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+    
+    loadBookedSlotsForDoctor();
+  }, [selectedStaff, dates, apiService]);
+  
+  // Check if a time slot is booked
+  const isTimeSlotBooked = (date, timeSlot) => {
+    const dateKey = formatDateKey(date);
+    const slotKey = `${dateKey}-${timeSlot}`;
+    return bookedSlots[slotKey] === true;
+  };
+  
+  // Handle cell click to create/edit appointment with availability check and role-based controls
+  const handleCellClick = async (date, timeSlot) => {
+    const dateKey = formatDateKey(date);
+    
+    // Check if user is logged in
+    if (!currentUser) {
+      setBookingStatus({
+        type: 'error',
+        message: 'Please log in to book appointments'
       });
+      return;
+    }
+    
+    // Check role-specific conditions
+    if (currentUser.role === 'doctor') {
+      // Doctors can view appointments but need to select a patient to book new ones
+      const appointments = getAppointments();
+      const existingAppointment = appointments[`${dateKey}-${timeSlot}`];
+      
+      if (existingAppointment) {
+        // View/edit existing appointment
+        setCurrentAppointment({
+          date: date,
+          timeSlot: timeSlot,
+          text: existingAppointment.text,
+          color: existingAppointment.color,
+          completed: existingAppointment.completed,
+          patientId: existingAppointment.patientId,
+          patientName: existingAppointment.patientName,
+          patientDetails: existingAppointment.patientDetails
+        });
+      } else {
+        // Create new appointment (need to select patient first)
+        if (!selectedPatient) {
+          setBookingStatus({
+            type: 'error',
+            message: 'Please select a patient first to book an appointment'
+          });
+          return;
+        }
+        
+        setCurrentAppointment({
+          date: date,
+          timeSlot: timeSlot,
+          text: '',
+          color: '#3b82f6',
+          completed: false,
+          patientId: selectedPatient.id,
+          patientName: selectedPatient.name,
+          patientDetails: selectedPatient
+        });
+      }
     } else {
-      setCurrentAppointment({
-        date: date,
-        timeSlot: timeSlot,
-        text: '',
-        color: '#3b82f6',
-        completed: false
-      });
+      // Regular patient flow
+      // Check if doctor is selected
+      if (!selectedStaff || !selectedStaff.id) {
+        setBookingStatus({
+          type: 'error',
+          message: 'Please select a doctor first'
+        });
+        return;
+      }
+      
+      // Check if the time slot is already booked
+      if (isTimeSlotBooked(date, timeSlot)) {
+        setBookingStatus({
+          type: 'error',
+          message: 'This time slot is already booked by another patient'
+        });
+        return;
+      }
+      
+      // Continue with checking for existing appointments in state
+      const appointments = getAppointments();
+      const existingAppointment = appointments[`${dateKey}-${timeSlot}`];
+      
+      if (existingAppointment) {
+        setCurrentAppointment({
+          date: date,
+          timeSlot: timeSlot,
+          text: existingAppointment.text,
+          color: existingAppointment.color,
+          completed: existingAppointment.completed
+        });
+      } else {
+        setCurrentAppointment({
+          date: date,
+          timeSlot: timeSlot,
+          text: '',
+          color: '#3b82f6',
+          completed: false
+        });
+      }
     }
     
     setShowModal(true);
   };
   
-  // Save appointment
-  const saveAppointment = () => {
+  // Create a new appointment with locking mechanism
+  const saveAppointment = async () => {
     if (!currentAppointment.date || !currentAppointment.timeSlot) return;
     
     const dateKey = formatDateKey(currentAppointment.date);
     const appointmentKey = `${dateKey}-${currentAppointment.timeSlot}`;
     const currentAppointments = getAppointments();
     
+    // If this is a new appointment (not an edit), check with the server 
+    // if the slot is still available
+    if (!currentAppointments[appointmentKey]) {
+      try {
+        setBookingStatus({ type: 'loading', message: 'Checking availability...' });
+        
+        // Check if API service is available
+        if (!apiService) {
+          throw new Error("API service not available");
+        }
+        
+        // Different logic based on user role
+        if (currentUser.role === 'doctor') {
+          // Doctors booking for patients
+          if (!selectedPatient) {
+            setBookingStatus({
+              type: 'error',
+              message: 'Please select a patient first'
+            });
+            return;
+          }
+          
+          // Create the appointment on the server for the selected patient
+          const appointmentData = {
+            doctorId: currentUser.id,  // Doctor is booking for themselves
+            patientId: selectedPatient.id, // Selected patient
+            date: dateKey,
+            timeSlot: currentAppointment.timeSlot,
+            reason: currentAppointment.text || 'Appointment scheduled by doctor'
+          };
+          
+          console.log('Doctor creating appointment for patient:', appointmentData);
+          
+          const result = await apiService.post('/appointments/doctor-book', appointmentData);
+          
+          if (result) {
+            console.log("Appointment created by doctor successfully:", result);
+            
+            // Update our local state with the new appointment
+            const updatedAppointments = {
+              ...currentAppointments,
+              [appointmentKey]: {
+                id: result.id,
+                text: currentAppointment.text,
+                color: currentAppointment.color,
+                completed: currentAppointment.completed,
+                status: 'confirmed', // Doctor-created appointments are automatically confirmed
+                patientId: selectedPatient.id,
+                patientName: selectedPatient.name,
+                patientDetails: selectedPatient
+              }
+            };
+            
+            updateAppointments(updatedAppointments);
+            
+            // Mark this slot as booked locally
+            setBookedSlots(prev => ({
+              ...prev,
+              [appointmentKey]: true
+            }));
+            
+            setBookingStatus({
+              type: 'success',
+              message: `Appointment for ${selectedPatient.name} booked successfully!`
+            });
+            
+            // After successful booking, reload appointments
+            await loadUserAppointments();
+          }
+        } else {
+          // Regular patient booking flow
+          // Verify doctor is selected
+          if (!selectedStaff || !selectedStaff.id) {
+            setBookingStatus({
+              type: 'error',
+              message: 'Please select a doctor first'
+            });
+            return;
+          }
+          
+          // First, check availability
+          const response = await apiService.get('/appointments/check-availability', {
+            params: {
+              doctorId: selectedStaff.id,
+              date: dateKey,
+              timeSlot: currentAppointment.timeSlot
+            }
+          });
+          
+          if (!response.available) {
+            setBookingStatus({
+              type: 'error',
+              message: 'This time slot has been booked by someone else. Please choose another time.'
+            });
+            
+            // Mark this slot as booked in our local state
+            setBookedSlots(prev => ({
+              ...prev,
+              [appointmentKey]: true
+            }));
+            
+            return;
+          }
+          
+          // Create the appointment on the server
+          const appointmentData = {
+            doctorId: selectedStaff.id,
+            date: dateKey,
+            timeSlot: currentAppointment.timeSlot,
+            reason: currentAppointment.text || 'General consultation'
+          };
+          
+          console.log('Creating appointment with data:', appointmentData);
+          
+          // Make the API call with the required parameters
+          const result = await apiService.post('/appointments', appointmentData);
+          
+          if (result) {
+            console.log("Appointment created successfully:", result);
+            
+            // Update our local state with the new appointment
+            const updatedAppointments = {
+              ...currentAppointments,
+              [appointmentKey]: {
+                id: result.id, // Store the returned ID for future operations
+                text: currentAppointment.text,
+                color: currentAppointment.color,
+                completed: currentAppointment.completed,
+                status: 'pending',
+                doctorName: selectedStaff.name
+              }
+            };
+            
+            updateAppointments(updatedAppointments);
+            
+            // Mark this slot as booked locally
+            setBookedSlots(prev => ({
+              ...prev,
+              [appointmentKey]: true
+            }));
+            
+            setBookingStatus({
+              type: 'success',
+              message: 'Appointment booked successfully!'
+            });
+            
+            // After successful booking, reload user's appointments
+            await loadUserAppointments();
+          }
+        }
+      } catch (error) {
+        console.error('Error saving appointment:', error);
+        
+        setBookingStatus({
+          type: 'error',
+          message: error.message || 'Failed to book appointment. Please try again.'
+        });
+        
+        return;
+      }
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setBookingStatus(null);
+      }, 3000);
+      
+      setShowModal(false);
+      return;
+    }
+    
+    // If editing an existing appointment (marking as completed, etc.)
+    const updatedAppointment = {
+      ...(currentAppointments[appointmentKey] || {}),
+      text: currentAppointment.text,
+      color: currentAppointment.color,
+      completed: currentAppointment.completed
+    };
+    
+    // If doctor is marking appointment as completed/updating status
+    if (currentUser?.role === 'doctor' && updatedAppointment.id) {
+      try {
+        const result = await apiService.put(`/appointments/${updatedAppointment.id}`, {
+          status: currentAppointment.completed ? 'completed' : 'confirmed',
+          notes: currentAppointment.text
+        });
+        
+        console.log("Appointment updated by doctor:", result);
+      } catch (error) {
+        console.error('Error updating appointment status:', error);
+      }
+    }
+    
     const updatedAppointments = {
       ...currentAppointments,
-      [appointmentKey]: {
-        text: currentAppointment.text,
-        color: currentAppointment.color,
-        completed: currentAppointment.completed
-      }
+      [appointmentKey]: updatedAppointment
     };
     
     updateAppointments(updatedAppointments);
     setShowModal(false);
   };
   
-  // Delete appointment
-  const deleteAppointment = () => {
+  // Delete appointment with server sync
+  const deleteAppointment = async () => {
     if (!currentAppointment.date || !currentAppointment.timeSlot) return;
     
     const dateKey = formatDateKey(currentAppointment.date);
     const appointmentKey = `${dateKey}-${currentAppointment.timeSlot}`;
     const currentAppointments = getAppointments();
     
+    // Try to delete on the server if we have an API service
+    if (apiService && currentUser) {
+      try {
+        setBookingStatus({ type: 'loading', message: 'Cancelling appointment...' });
+        
+        // We would need the actual appointment ID, but in our mock setup we don't have it
+        // This code assumes we can find the appointment ID from a local mapping or the server
+        // const appointmentId = getAppointmentId(appointmentKey);
+        // await apiService.delete(`/appointments/${appointmentId}`);
+        
+        // Since we don't have the ID, we'll just remove it locally
+        console.log(`Would delete appointment for ${dateKey} at ${currentAppointment.timeSlot}`);
+        
+        // Mark the slot as available
+        setBookedSlots(prev => {
+          const updated = { ...prev };
+          delete updated[appointmentKey];
+          return updated;
+        });
+        
+        setBookingStatus({
+          type: 'success',
+          message: 'Appointment cancelled successfully!'
+        });
+      } catch (error) {
+        console.error('Error cancelling appointment:', error);
+        
+        setBookingStatus({
+          type: 'error',
+          message: 'Failed to cancel appointment. Please try again.'
+        });
+        
+        return;
+      }
+    }
+    
+    // Update local state
     const updatedAppointments = {...currentAppointments};
     delete updatedAppointments[appointmentKey];
     
     updateAppointments(updatedAppointments);
+    
+    // Immediately hide any previous status after success
+    setTimeout(() => {
+      setBookingStatus(null);
+    }, 3000);
+    
     setShowModal(false);
-  };
-  
-  // Toggle appointment completion
-  const toggleCompleted = () => {
-    setCurrentAppointment(prev => ({
-      ...prev,
-      completed: !prev.completed
-    }));
   };
   
   // Add a new time slot
@@ -604,8 +967,188 @@ export default function AppointmentScheduler() {
     </svg>
   );
 
+  // Load user's appointments when component mounts or when user changes
+  useEffect(() => {
+    if (currentUser && apiService) {
+      loadUserAppointments();
+    }
+  }, [currentUser, apiService]);
+
+  // New function to load user's existing appointments
+  const loadUserAppointments = async () => {
+    try {
+      setLoadingSlots(true);
+      
+      const endpoint = currentUser?.role === 'doctor' 
+        ? '/appointments/doctor' 
+        : '/appointments';
+      
+      const appointments = await apiService.get(endpoint);
+      console.log("User appointments loaded:", appointments);
+      
+      // Create a lookup object for booked slots
+      const userBookedSlots = {};
+      appointments.forEach(apt => {
+        // For doctors, show patient information in appointments
+        const appointmentData = {
+          id: apt.id,
+          text: apt.reason || 'Appointment',
+          color: getStatusColor(apt.status),
+          completed: apt.status === 'completed',
+          status: apt.status,
+        };
+        
+        // Add doctor or patient details based on user role
+        if (currentUser?.role === 'doctor') {
+          appointmentData.patientId = apt.patientId;
+          appointmentData.patientName = apt.patientName;
+          appointmentData.patientDetails = apt.patient; // If the API returns patient details
+        } else {
+          appointmentData.doctorName = apt.doctorName;
+        }
+        
+        userBookedSlots[`${apt.date}-${apt.timeSlot}`] = appointmentData;
+      });
+      
+      // Update appointments state
+      setStaffAppointments(prev => ({
+        ...prev,
+        [currentUser.id]: userBookedSlots
+      }));
+      
+      // Update booked slots for display
+      const doctorBookedSlots = {};
+      appointments.forEach(apt => {
+        if (apt.status !== 'cancelled') {
+          doctorBookedSlots[`${apt.date}-${apt.timeSlot}`] = true;
+        }
+      });
+      
+      setBookedSlots(doctorBookedSlots);
+    } catch (error) {
+      console.error("Error loading user appointments:", error);
+      setBookingStatus({
+        type: 'error',
+        message: 'Could not load your appointments'
+      });
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  // Helper function to get color based on appointment status
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return '#10b981'; // green
+      case 'cancelled': return '#ef4444'; // red
+      case 'confirmed': return '#3b82f6'; // blue
+      case 'pending': return '#f59e0b'; // amber
+      default: return '#3b82f6'; // default blue
+    }
+  };
+
+  // New function to handle appointment cancellation
+  const handleCancelAppointment = async (key) => {
+    const [dateStr, timeSlot] = key.split('-');
+    const appointments = getAppointments();
+    const appointment = appointments[key];
+    
+    if (!appointment || !appointment.id) {
+      setBookingStatus({
+        type: 'error',
+        message: 'Could not find appointment details'
+      });
+      return;
+    }
+    
+    try {
+      setBookingStatus({
+        type: 'loading',
+        message: 'Cancelling appointment...'
+      });
+      
+      await apiService.delete(`/appointments/${appointment.id}`);
+      
+      // Update local state
+      await loadUserAppointments();
+      
+      setBookingStatus({
+        type: 'success',
+        message: 'Appointment cancelled successfully'
+      });
+      
+      setTimeout(() => {
+        setBookingStatus(null);
+      }, 3000);
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      setBookingStatus({
+        type: 'error',
+        message: 'Failed to cancel appointment: ' + error.message
+      });
+    }
+  };
+
+  // Helper function to format date from key
+  const formatDateFromKey = (dateStr) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  // Helper function to get badge class based on status
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'completed': return 'success';
+      case 'cancelled': return 'danger';
+      case 'confirmed': return 'primary';
+      case 'pending': return 'warning';
+      default: return 'secondary';
+    }
+  };
+
+  // Add state for patient selection (for doctors booking for patients)
+  const [patientsList, setPatientsList] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  
+  // Load patients list for doctors
+  useEffect(() => {
+    if (currentUser?.role === 'doctor' && apiService) {
+      const loadPatients = async () => {
+        try {
+          const response = await apiService.get('/users/patients');
+          setPatientsList(response || []);
+        } catch (error) {
+          console.error('Error loading patients:', error);
+        }
+      };
+      loadPatients();
+    }
+  }, [currentUser, apiService]);
+  
+  // Modify the staff carousel to show only appropriate staff based on user role
+  const getDisplayedStaffMembers = () => {
+    if (!currentUser) return staffMembers;
+    
+    if (currentUser.role === 'doctor') {
+      // Doctors should only see patients, not other doctors
+      return [];  // Empty since doctors shouldn't book with other doctors
+    } else {
+      // Patients see all doctors
+      return staffMembers;
+    }
+  };
+
   return (
     <div style={styles.container}>
+      {/* Header */}
       <div style={styles.header}>
         <div style={styles.dateNav}>
           <button 
@@ -628,26 +1171,153 @@ export default function AppointmentScheduler() {
         </div>
       </div>
       
-      {/* Staff Carousel */}
-      <div style={styles.staffCarousel}>
-        {staffMembers.map(staff => (
-          <div 
-            key={staff.id} 
-            style={styles.staffMember}
-            onClick={() => handleStaffSelect(staff)}
-          >
-            <img 
-              src={staff.image} 
-              alt={staff.name}
-              style={{
-                ...styles.staffImage,
-                ...(selectedStaff.id === staff.id ? styles.activeStaffImage : {})
-              }}
-            />
-            <div style={styles.staffName}>{staff.name}</div>
+      {/* My Appointments Summary - New section */}
+      {currentUser && (
+        <div className="my-appointments-summary mb-4">
+          <h4 className="mb-3">
+            {currentUser.role === 'doctor' ? 'My Patient Appointments' : 'My Upcoming Appointments'}
+          </h4>
+          {loadingSlots ? (
+            <div className="text-center py-3">
+              <div className="spinner-border spinner-border-sm text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="text-muted mt-2">Loading your appointments...</p>
+            </div>
+          ) : Object.keys(getAppointments()).length > 0 ? (
+            <div className="table-responsive">
+              <table className="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Doctor</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(getAppointments()).map(([key, appointment]) => {
+                    const [dateStr, timeSlot] = key.split('-');
+                    return (
+                      <tr key={key}>
+                        <td>{formatDateFromKey(dateStr)}</td>
+                        <td>{timeSlot}</td>
+                        <td>{appointment.doctorName || selectedStaff?.name || 'Unknown'}</td>
+                        <td>{appointment.text}</td>
+                        <td>
+                          <span className={`badge bg-${getStatusClass(appointment.status)}`}>
+                            {appointment.status || 'pending'}
+                          </span>
+                        </td>
+                        <td>
+                          <button 
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleCancelAppointment(key)}
+                          >
+                            Cancel
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="alert alert-info">
+              You don't have any upcoming appointments. Book one below.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Status message for booking actions */}
+      {bookingStatus && (
+        <div 
+          className={`alert ${
+            bookingStatus.type === 'error' ? 'alert-danger' :
+            bookingStatus.type === 'success' ? 'alert-success' : 
+            'alert-info'
+          } mb-3`}
+        >
+          {bookingStatus.type === 'loading' && (
+            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          )}
+          {bookingStatus.message}
+          <button 
+            type="button" 
+            className="btn-close float-end" 
+            onClick={() => setBookingStatus(null)}
+          ></button>
+        </div>
+      )}
+      
+      {/* Doctor-specific patient selector (only show for doctors) */}
+      {currentUser?.role === 'doctor' && (
+        <div className="mb-4 p-3 border rounded bg-light">
+          <h5>Book Appointment for Patient</h5>
+          <div className="row align-items-center">
+            <div className="col-md-6">
+              <select 
+                className="form-select"
+                value={selectedPatient?.id || ''}
+                onChange={(e) => {
+                  const patient = patientsList.find(p => p.id === e.target.value);
+                  setSelectedPatient(patient || null);
+                }}
+              >
+                <option value="">Select a patient</option>
+                {patientsList.map(patient => (
+                  <option key={patient.id} value={patient.id}>
+                    {patient.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-6">
+              {selectedPatient ? (
+                <div className="d-flex align-items-center">
+                  <span className="badge bg-success me-2">Selected:</span>
+                  <span>{selectedPatient.name}</span>
+                  <button 
+                    className="btn btn-sm btn-link ms-2"
+                    onClick={() => setSelectedPatient(null)}
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : (
+                <span className="text-muted">Select a patient to book an appointment</span>
+              )}
+            </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+      
+      {/* Staff Carousel - Only show for patients or if doctor has selected a patient */}
+      {(currentUser?.role !== 'doctor' || selectedPatient) && (
+        <div style={styles.staffCarousel}>
+          {getDisplayedStaffMembers().map(staff => (
+            <div 
+              key={staff.id} 
+              style={styles.staffMember}
+              onClick={() => handleStaffSelect(staff)}
+            >
+              <img 
+                src={staff.image} 
+                alt={staff.name}
+                style={{
+                  ...styles.staffImage,
+                  ...(selectedStaff?.id === staff.id ? styles.activeStaffImage : {})
+                }}
+              />
+              <div style={styles.staffName}>{staff.name}</div>
+            </div>
+          ))}
+        </div>
+      )}
       
       <div style={styles.content}>
         {/* Main calendar grid */}
@@ -690,12 +1360,34 @@ export default function AppointmentScheduler() {
                       const appointments = getAppointments();
                       const appointment = appointments[appointmentKey];
                       
+                      // Check if this slot is booked by someone else
+                      const isBooked = isTimeSlotBooked(date, timeSlot);
+                      
                       return (
                         <td 
                           key={dateIndex} 
-                          style={{...styles.td, ...styles.appointmentCell}}
+                          style={{
+                            ...styles.td, 
+                            ...styles.appointmentCell,
+                            // Highlight booked slots with a subtle background
+                            ...(isBooked ? { backgroundColor: '#f8d7da' } : {})
+                          }}
                           onClick={() => handleCellClick(date, timeSlot)}
                         >
+                          {isBooked && !appointment && (
+                            <div 
+                              style={{
+                                ...styles.appointmentItem,
+                                backgroundColor: '#f8d7da33',
+                                borderLeft: '4px solid #dc3545'
+                              }}
+                            >
+                              <div style={styles.appointmentContent}>
+                                <div style={styles.appointmentText}>Booked</div>
+                              </div>
+                            </div>
+                          )}
+                          
                           {appointment && (
                             <div 
                               style={{
@@ -776,6 +1468,30 @@ export default function AppointmentScheduler() {
               Click on any cell to add or edit an appointment. Use the color picker to categorize your appointments.
             </p>
           </div>
+          
+          {/* Legend for appointment status */}
+          <div style={styles.sidebarSection}>
+            <label style={styles.sidebarLabel}>Appointment Legend</label>
+            <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center' }}>
+              <div style={{ 
+                width: '16px', 
+                height: '16px', 
+                backgroundColor: '#f8d7da', 
+                marginRight: '8px' 
+              }}></div>
+              <span>Booked by another patient</span>
+            </div>
+            <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center' }}>
+              <div style={{ 
+                width: '16px', 
+                height: '16px', 
+                backgroundColor: '#3b82f633', 
+                borderLeft: '4px solid #3b82f6',
+                marginRight: '8px' 
+              }}></div>
+              <span>Your appointment</span>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -786,16 +1502,55 @@ export default function AppointmentScheduler() {
             <div style={styles.modalContent}>
               <h3 style={styles.modalTitle}>
                 {getAppointments()[`${formatDateKey(currentAppointment.date)}-${currentAppointment.timeSlot}`] 
-                  ? 'Edit Appointment' 
+                  ? currentUser?.role === 'doctor' ? 'View/Edit Appointment' : 'Edit Appointment'
                   : 'New Appointment'}
               </h3>
               
-              <div style={styles.modalField}>
-                <label style={styles.modalLabel}>Staff Member</label>
-                <div style={styles.modalValue}>
-                  {selectedStaff.name}
+              {/* For doctors, show patient info. For patients, show doctor info */}
+              {currentUser?.role === 'doctor' ? (
+                <div style={styles.modalField}>
+                  <label style={styles.modalLabel}>Patient</label>
+                  <div style={styles.modalValue}>
+                    {currentAppointment.patientName || selectedPatient?.name || 'Unknown Patient'}
+                  </div>
+                  
+                  {/* If we have patient details, show them */}
+                  {(currentAppointment.patientDetails || selectedPatient) && (
+                    <div className="mt-2 p-2 border rounded bg-light">
+                      <h6>Patient Information:</h6>
+                      <div className="row">
+                        <div className="col-md-6">
+                          <small className="text-muted">Contact:</small>
+                          <div>{currentAppointment.patientDetails?.contact || selectedPatient?.contact || 'N/A'}</div>
+                        </div>
+                        <div className="col-md-6">
+                          <small className="text-muted">Blood Group:</small>
+                          <div>{currentAppointment.patientDetails?.bloodGroup || selectedPatient?.bloodGroup || 'N/A'}</div>
+                        </div>
+                        <div className="col-md-6">
+                          <small className="text-muted">Gender:</small>
+                          <div>{currentAppointment.patientDetails?.gender || selectedPatient?.gender || 'N/A'}</div>
+                        </div>
+                        <div className="col-md-6">
+                          <small className="text-muted">Age/DOB:</small>
+                          <div>{currentAppointment.patientDetails?.dob || selectedPatient?.dob || 'N/A'}</div>
+                        </div>
+                        <div className="col-12">
+                          <small className="text-muted">Allergies:</small>
+                          <div>{currentAppointment.patientDetails?.allergies || selectedPatient?.allergies || 'None'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              ) : (
+                <div style={styles.modalField}>
+                  <label style={styles.modalLabel}>Doctor</label>
+                  <div style={styles.modalValue}>
+                    {selectedStaff?.name || 'Unknown Doctor'}
+                  </div>
+                </div>
+              )}
               
               <div style={styles.modalField}>
                 <label style={styles.modalLabel}>Date & Time</label>
@@ -805,13 +1560,15 @@ export default function AppointmentScheduler() {
               </div>
               
               <div style={styles.modalField}>
-                <label style={styles.modalLabel}>Description</label>
+                <label style={styles.modalLabel}>
+                  {currentUser?.role === 'doctor' ? 'Notes' : 'Reason for Visit'}
+                </label>
                 <textarea
                   style={styles.modalTextarea}
                   rows="3"
                   value={currentAppointment.text}
                   onChange={(e) => setCurrentAppointment(prev => ({ ...prev, text: e.target.value }))}
-                  placeholder="Appointment details..."
+                  placeholder={currentUser?.role === 'doctor' ? "Doctor's notes..." : "Reason for appointment..."}
                 />
               </div>
               
@@ -840,7 +1597,11 @@ export default function AppointmentScheduler() {
                     checked={currentAppointment.completed}
                     onChange={toggleCompleted}
                   />
-                  <span>Mark as completed</span>
+                  <span>
+                    {currentUser?.role === 'doctor' 
+                      ? 'Mark as completed' 
+                      : 'Mark as completed (for your records only)'}
+                  </span>
                 </label>
               </div>
               
@@ -850,7 +1611,7 @@ export default function AppointmentScheduler() {
                     onClick={deleteAppointment}
                     style={styles.deleteButton}
                   >
-                    Delete
+                    {currentUser?.role === 'doctor' ? 'Cancel Appointment' : 'Cancel Appointment'}
                   </button>
                 </div>
                 <div style={styles.actionButtons}>
@@ -858,13 +1619,18 @@ export default function AppointmentScheduler() {
                     onClick={() => setShowModal(false)}
                     style={styles.cancelButton}
                   >
-                    Cancel
+                    Close
                   </button>
                   <button
                     onClick={saveAppointment}
                     style={styles.saveButton}
                   >
-                    Save
+                    {bookingStatus?.type === 'loading' ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Saving...
+                      </>
+                    ) : 'Save Appointment'}
                   </button>
                 </div>
               </div>

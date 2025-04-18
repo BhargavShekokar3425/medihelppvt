@@ -1,111 +1,113 @@
-// import { Link } from "react-router-dom";  // Import Link from React Router
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useBackendContext } from "../contexts/BackendContext";
 
-function Doctors(){
-  return(
-      <div>
-      <div className="container">
+const Doctors = () => {
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { apiService } = useBackendContext();
+  
+  useEffect(() => {
+    const loadDoctors = async () => {
+      try {
+        setLoading(true);
         
-          <div className="jumbotron gradient-background p-4 p-md-5 text-white rounded bg-dark" style={{ marginBottom: "32px" }}>
-              <div className="col-md-6 px-0" style={{ color: "black" }}>
-                  <h1 className="display-4 font-italic">Get to Know Your Doctors!</h1>
-                  <p className="lead my-3">Explore a diverse panel of experienced medical professionals across various specialties, ready to provide expert care.</p>
-                  <p className="lead my-3">Check their qualifications, areas of expertise, and availability to make informed healthcare decisions with confidence.</p>
-                  <p className="lead mb-0 text-white font-weight-bold" style={{ fontWeight: "bolder" }}>Explore Our Panel of Doctors Below...</p>
-              </div>
+        // Try to load doctors from API
+        let doctorsList = [];
+        if (apiService) {
+          doctorsList = await apiService.get('/users/doctors');
+        } else {
+          // Fallback to hardcoded doctors if API fails
+          doctorsList = [
+            { id: 'd1', name: 'Dr. Neha Sharma', specialization: 'Cardiology', experience: '10 years', avatar: '/assets/femme.jpeg' },
+            { id: 'd2', name: 'Dr. Shikha Chibber', specialization: 'Neurology', experience: '8 years', avatar: '/assets/fem.jpeg' },
+            { id: 'd3', name: 'Dr. Ayurvedic Specialists', specialization: 'Ayurveda', experience: '15 years', avatar: '/assets/doctorman.avif' },
+            { id: 'd4', name: 'Dr. Vibha Dubey', specialization: 'Dermatology', experience: '12 years', avatar: '/assets/femmedocie.jpg' },
+            { id: 'd5', name: 'Dr. Shweta Singh', specialization: 'Pediatrics', experience: '7 years', avatar: '/assets/cutu.jpeg' },
+            { id: 'd6', name: 'Dr. Misha Goyal', specialization: 'Gynecology', experience: '9 years', avatar: '/assets/vcutu.jpg' }
+          ];
+        }
+        
+        setDoctors(doctorsList);
+      } catch (error) {
+        console.error("Error loading doctors:", error);
+        setError("Could not load doctors. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadDoctors();
+  }, [apiService]);
+
+  // Render doctors
+  return (
+    <div className="doctors-page py-4">
+      <div className="jumbotron gradient-background p-4 p-md-5 text-white rounded bg-dark mb-4">
+        <div className="col-md-6 px-0" style={{ color: "black" }}>
+          <h1 className="display-4 font-italic">Our Specialist Doctors</h1>
+          <p className="lead my-3">
+            Meet our team of experienced healthcare professionals who are ready to help you with your medical needs.
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="text-center p-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
           </div>
-
-    
-  <div class="row text-center">
-    <div class="col-lg-4 d-flex flex-column align-items-center">
-    <img 
-className="bd-placeholder-img rounded-circle" 
-width="140" 
-height="140" 
-src="/assets/femme.jpeg" 
-alt="Placeholder"/>      
-      <h2 class="fw-normal mt-3">Dr. Neha Sharma</h2>
-
-          <p class="mb-1"><strong>Degree:</strong> MBBS, PGDMT, PGDMC</p>
-          <p class="mb-1"><strong>Email:</strong> nehasharma@iitj.ac.in</p>
+          <p className="mt-3">Loading doctors...</p>
+        </div>
+      ) : error ? (
+        <div className="alert alert-danger">{error}</div>
+      ) : (
+        <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+          {doctors.map((doctor) => (
+            <div className="col" key={doctor.id}>
+              <div className="card h-100 shadow-sm doctor-card">
+                <div className="card-img-wrapper">
+                  <img 
+                    src={doctor.avatar || '/assets/default-avatar.png'} 
+                    className="card-img-top" 
+                    alt={doctor.name} 
+                    style={{ height: '240px', objectFit: 'cover' }}
+                  />
+                  <div className="doctor-overlay">
+                    <Link 
+                      to="/appointments" 
+                      state={{ selectedDoctorId: doctor.id }}
+                      className="btn btn-sm btn-primary"
+                    >
+                      Book Appointment
+                    </Link>
+                  </div>
+                </div>
+                <div className="card-body">
+                  <h5 className="card-title">{doctor.name}</h5>
+                  <p className="card-text text-muted">{doctor.specialization}</p>
+                  <p className="card-text">
+                    <small className="text-muted">Experience: {doctor.experience}</small>
+                  </p>
+                </div>
+                <div className="card-footer bg-white border-top-0">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <span className="text-success">
+                      <i className="fas fa-circle me-1"></i> Available
+                    </span>
+                    <Link to={`/reviews/doctor/${doctor.id}`} className="text-decoration-none">
+                      Reviews <i className="fas fa-chevron-right ms-1 small"></i>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
-    <div class="col-lg-4">
-
-     
-          <img 
-className="bd-placeholder-img rounded-circle" 
-width="140" 
-height="140" 
-src="/assets/fem.jpeg" 
-alt="Placeholder"/>    
-          <h2 class="fw-normal">Dr. Shikha Chibber</h2>
-          <p class="mb-1"><strong>Specialization:</strong> MD Psychiatry</p>
-          <p class="mb-1"><strong>Availability:</strong> Tuesday & Friday</p>
-          <p class="mb-1"><strong>From:</strong> Goyal Hospital (Saturdays)</p>
-      </div>
-    <div class="col-lg-4">
-    <img 
-className="bd-placeholder-img rounded-circle" 
-width="140" 
-height="140" 
-src="/assets/doctorman.avif" 
-alt="Placeholder"/>  
-  <h2 class="fw-normal">Ayurvedic Specialists</h2>
-  <p><strong>Specializations:</strong> Swasthavritta Naturopathy, Homeopathy, Ayurveda & Yogic Science</p>
-  <p><strong>Availability:</strong> Thursday & Saturday, 03:00 PM - 05:00 PM</p>
-</div>
-         
-
-    
-  </div>
-
-  <div class="row text-center " >
-    <div class="col-lg-4 d-flex flex-column align-items-center">
-    <img 
-className="bd-placeholder-img rounded-circle" 
-width="140" 
-height="140" 
-src="/assets/femmedocie.jpg" 
-alt="Placeholder"/>  
-  <h2 class="fw-normal">Dr. Vibha Dubey</h2>
-  <p><strong>Degree:</strong> MBBS, DCh Pediatrics</p>
-  <p><strong>Availability:</strong>Saturday, 10:00 AM - 12:00 PM</p>
-</div>
-
-   
-    <div class="col-lg-4 d-flex flex-column align-items-center text-center">
-    <img 
-className="bd-placeholder-img rounded-circle" 
-width="140" 
-height="140" 
-src="/assets/cutu.jpeg" 
-alt="Placeholder"/>  
-  <h2 class="fw-normal">Dr. Shreya Singh</h2>
-  <p><strong>Degree:</strong> MBBS, MD Psychiatry</p>
-  <p><strong>Availability:</strong> Saturday, 10:00 AM - 12:00 PM</p>
-</div>
-
-    <div class="col-lg-4">
-    <img 
-className="bd-placeholder-img rounded-circle" 
-width="140" 
-height="140" 
-src="/assets/vcutu.jpg" 
-alt="Placeholder"/>  
-          <h2 class="fw-normal">Doctors from Goyal Hospital</h2>
-          <p class="mb-1"><strong>Degree:</strong> MBBS, MS OBG</p>
-          <p class="mb-1"><strong>Availability:</strong> Saturday, 10:00 AM - 12:00 PM</p>
-      </div>
-
-    
-  </div>
-
-  
-
-  </div>
-  
-
-  
-</div>
   );
-}
+};
+
 export default Doctors;

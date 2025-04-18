@@ -1,0 +1,30 @@
+.network-status-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  z-index: 9999;
+  transition: all 0.5s ease;
+  animation: slideIn 0.5s forwards;
+}
+
+.network-status-banner.online {
+  background-color: #4caf50;
+  color: white;
+}
+
+.network-status-banner.offline {
+  background-color: #f44336;
+  color: white;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

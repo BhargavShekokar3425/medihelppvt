@@ -1,11 +1,8 @@
-import React, { useEffect } from "react";
-import { initializeApp } from "firebase/app";
-import firebaseConfig from "./firebase/config";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import UserProfile from "./pages/UserProfile";
 import Appointments from './pages/Appointments';
 import AppointmentScheduler from "./components/AppointmentScheduler";
-
 import Reviews from "./pages/Reviews";
 import PrescriptionMain from "./pages/Prescription_Hub";
 import PrescDoc from "./pages/PresDoctors";
@@ -13,8 +10,9 @@ import PrescPatient from "./pages/PresPatients";
 import Doctors from "./pages/Doctors";
 import SignUp from "./pages/SignUp";
 import DocAnswers from "./pages/DocAnswers";
-// import DocExchange from './pages/DocExchange';
 import CommunityForums from "./pages/CommunityForums";
+import HomePage from "./pages/HomePage";
+import AuthWrapper from "./components/AuthWrapper";
 
 import NavBar from "./components/NavBar"; 
 import Header from "./components/Header"; 
@@ -22,43 +20,73 @@ import Footer from "./components/Footer";
 
 import './App.css';
 import { BackendProvider } from './contexts/BackendContext';
-import { initializeFirebase } from './firebase/init';
 
 function App() { 
-  // Initialize Firebase when the app loads
-  useEffect(() => {
-    initializeApp(firebaseConfig);
-    initializeFirebase();
-  }, []);
-
   return (
-    <Router>
-      <BackendProvider>
-        <div className="container">
-          <Header/>
-          <NavBar/>
-          <Routes>
-            <Route path="/" element={<h1>Home Page</h1>} />
-            <Route path="/doctors" element={<Doctors />} />
-            <Route path="/sos" element={<h1>SOS Page</h1>} />
-            <Route path="/appointments" element={<Appointments />} />
-            <Route path="/scheduler" element={<AppointmentScheduler />} />
-            <Route path="/docanswers" element={<DocAnswers />} />
-            <Route path="/prescription-hub" element={<PrescriptionMain />} />
-            <Route path="/reviews" element={<Reviews />} />
-            <Route path="/pres-doctor" element={<PrescDoc />} />
-            <Route path="/pres-patient" element={<PrescPatient />} />
-            {/* <Route path="/doc-exchange" element={<DocExchange />} /> */}
-            <Route path="/community-forum" element={<CommunityForums />} />
-
-            {/* existing routes */}
-            <Route path="/profile" element={<UserProfile />} />
-            <Route path="/signup" element={<SignUp />} />
-          </Routes>
-          <Footer/>
-        </div>
-      </BackendProvider>
-    </Router>
+    <BackendProvider>
+      <div className="container">
+        <Header/>
+        <NavBar/>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/doctors" element={<Doctors />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/reviews" element={<Reviews />} />
+          
+          {/* Protected routes */}
+          <Route path="/sos" element={
+            <AuthWrapper>
+              <h1>SOS Page</h1>
+            </AuthWrapper>
+          } />
+          <Route path="/appointments" element={
+            <AuthWrapper>
+              <Appointments />
+            </AuthWrapper>
+          } />
+          <Route path="/scheduler" element={
+            <AuthWrapper>
+              <AppointmentScheduler />
+            </AuthWrapper>
+          } />
+          <Route path="/docanswers" element={
+            <AuthWrapper>
+              <DocAnswers />
+            </AuthWrapper>
+          } />
+          <Route path="/prescription-hub" element={
+            <AuthWrapper>
+              <PrescriptionMain />
+            </AuthWrapper>
+          } />
+          <Route path="/pres-doctor" element={
+            <AuthWrapper requiredRole="doctor">
+              <PrescDoc />
+            </AuthWrapper>
+          } />
+          <Route path="/pres-patient" element={
+            <AuthWrapper>
+              <PrescPatient />
+            </AuthWrapper>
+          } />
+          <Route path="/community-forum" element={
+            <AuthWrapper>
+              <CommunityForums />
+            </AuthWrapper>
+          } />
+          <Route path="/profile" element={
+            <AuthWrapper>
+              <UserProfile />
+            </AuthWrapper>
+          } />
+          
+          {/* Fallback for unknown routes */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        <Footer/>
+      </div>
+    </BackendProvider>
   );
 }
 

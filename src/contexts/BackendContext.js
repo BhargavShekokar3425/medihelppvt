@@ -1,28 +1,26 @@
-import { createContext, useContext } from 'react';
-import { useBackend } from '../hooks/useBackend';
+import React, { createContext, useContext } from 'react';
+import { useBackendState } from '../hooks/useBackendState';
 
-// Create context
+// Create Context
 const BackendContext = createContext(null);
 
-// Context provider component
+// Provider Component
 export const BackendProvider = ({ children }) => {
-  const backend = useBackend();
+  const backendState = useBackendState();
   
   return (
-    <BackendContext.Provider value={backend}>
+    <BackendContext.Provider value={backendState}>
       {children}
     </BackendContext.Provider>
   );
 };
 
-// Custom hook to use the backend context
+// Custom Hook for using the context
 export const useBackendContext = () => {
   const context = useContext(BackendContext);
-  
   if (!context) {
     throw new Error('useBackendContext must be used within a BackendProvider');
   }
-  
   return context;
 };
 

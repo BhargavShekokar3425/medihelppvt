@@ -1,0 +1,32 @@
+.signup-container {
+  min-height: 80vh;
+}
+
+.card {
+  border: none;
+  border-radius: 0.5rem;
+}
+
+.card-header {
+  background: linear-gradient(135deg, #5e60ce, #4ea8de);
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.user-specific-fields {
+  border-top: 1px solid #eee;
+  padding-top: 1.5rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #5e60ce, #4ea8de);
+  border: none;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #4e54c8, #4ea8de);
+}
+
+.form-check-input:checked {
+  background-color: #5e60ce;
+  border-color: #5e60ce;
+}

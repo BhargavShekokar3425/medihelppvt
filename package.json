@@ -1,36 +1,46 @@
 {
-  "name": "html_to_react",
-  "version": "0.1.0",
+  "name": "medihelppvt",
+  "version": "1.0.0",
+  "description": "Medical help application with frontend and backend",
   "private": true,
-  "dependencies": {
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
-    "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.8.4",
-    "firebase": "^10.14.1",
-    "framer-motion": "^10.17.9",
-    "nth-check": "^2.1.1",
-    "postcss": "^8.5.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^7.4.1",
-    "react-scripts": "^5.0.1",
-    "web-vitals": "^2.1.4",
-    "webpack-dev-middleware": "^7.4.2"
-  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "dev": "react-scripts start"
+    "server": "cd backend && node start.js",
+    "server:dev": "cd backend && nodemon server.js --config nodemon.json",
+    "dev": "concurrently \"npm run server:dev\" \"npm start\"",
+    "install-all": "npm install && cd backend && npm install"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+  "dependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^13.5.0",
+    "assert": "^2.1.0",
+    "axios": "^1.8.4",
+    "browserify-zlib": "^0.2.0",
+    "buffer": "^6.0.3",
+    "cors": "^2.8.5",
+    "crypto-browserify": "^3.12.1",
+    "express": "^4.21.2",
+    "framer-motion": "^10.17.9",
+    "https-browserify": "^1.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "nth-check": "^2.1.1",
+    "postcss": "^8.5.3",
+    "process": "^0.11.10",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.4.1",
+    "react-scripts": "^5.0.1",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "url": "^0.11.4",
+    "util": "^0.12.5",
+    "web-vitals": "^2.1.4",
+    "webpack-dev-middleware": "^7.4.2"
   },
   "browserslist": {
     "production": [
@@ -43,5 +53,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.1",
+    "react-app-rewired": "^2.2.1",
+    "eslint-plugin-react-hooks": "^4.6.0"
   }
 }

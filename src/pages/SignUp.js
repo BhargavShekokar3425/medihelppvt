@@ -1,19 +1,16 @@
-import React, { useState } from "react";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
-} from "firebase/auth";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "../firebase/config";
-import { doc, setDoc } from "firebase/firestore";
+import { useBackendContext } from "../contexts/BackendContext";
+import LoginHelper from '../components/LoginHelper';
 
 const SignUp = () => {
-  const [mode, setMode] = useState(null);
+  const [mode, setMode] = useState("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formData, setFormData] = useState({
     role: "Patient",
     username: "",
+    name: "",
     dob: "",
     address: "",
     contact: "",
@@ -21,251 +18,388 @@ const SignUp = () => {
     gender: "",
     allergies: ""
   });
-
+  const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formStep, setFormStep] = useState(1);
+  const [success, setSuccess] = useState(false);
+  
   const navigate = useNavigate();
+  const { register, login, currentUser } = useBackendContext();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (currentUser) {
+      navigate('/profile');
+    }
+  }, [currentUser, navigate]);
 
   const handleInput = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const nextStep = () => {
+    if (formStep === 1) {
+      if (!email || !password) {
+        setFormError("Email and password are required");
+        return;
+      }
+    } else if (formStep === 2) {
+      if (!formData.name || !formData.role) {
+        setFormError("Name and role are required");
+        return;
+      }
+    }
+    setFormError("");
+    setFormStep(formStep + 1);
+  };
+
+  const prevStep = () => {
+    setFormStep(formStep - 1);
+  };
+
   const handleSignup = async (e) => {
     e.preventDefault();
+    setFormError("");
+    setIsSubmitting(true);
+    
     try {
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
-      const uid = userCred.user.uid;
-
-      await setDoc(doc(db, "users", uid), {
-        email,
-        ...formData,
-      });
-
-      alert("Sign Up successful! Please log in.");
-      setMode("login");
+      if (!email || !password || !formData.name) {
+        throw new Error("Email, password and name are required");
+      }
+      
+      console.log("Registering with:", { email, password, userType: formData.role.toLowerCase(), ...formData });
+      
+      await register(email, password, formData.role.toLowerCase(), formData);
+      
+      setSuccess(true);
+      setTimeout(() => {
+        navigate("/profile");
+      }, 2000);
     } catch (error) {
-      alert(error.message);
+      console.error("Registration error:", error);
+      setFormError(error.message || "An error occurred during registration");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setFormError("");
+    setIsSubmitting(true);
+    
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await login(email, password);
       navigate("/profile");
     } catch (error) {
-      alert(error.message);
+      console.error("Login error:", error);
+      setFormError(error.message || "An error occurred during login");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const renderSignupForm = () => {
+    if (success) {
+      return (
+        <div className="text-center p-4">
+          <div className="mb-4">
+            <i className="fas fa-check-circle text-success" style={{ fontSize: "4rem" }}></i>
+          </div>
+          <h3>Registration Successful!</h3>
+          <p>Redirecting to your profile...</p>
+        </div>
+      );
+    }
+
+    return (
+      <form onSubmit={handleSignup}>
+        {formStep === 1 && (
+          <>
+            <div className="mb-3">
+              <label>Email:</label>
+              <input 
+                type="email" 
+                className="form-control" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
+              />
+            </div>
+            <div className="mb-3">
+              <label>Password:</label>
+              <input 
+                type="password" 
+                className="form-control" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                required 
+              />
+            </div>
+            <button 
+              type="button" 
+              className="btn btn-primary w-100 gradient-background border-0"
+              onClick={nextStep}
+            >
+              Next
+            </button>
+          </>
+        )}
+
+        {formStep === 2 && (
+          <>
+            <div className="mb-3">
+              <label>Name:</label>
+              <input 
+                type="text" 
+                name="name" 
+                className="form-control" 
+                onChange={handleInput} 
+                required 
+              />
+            </div>
+            
+            <div className="mb-3">
+              <label>Role:</label>
+              <select 
+                className="form-control" 
+                name="role" 
+                onChange={handleInput} 
+                required
+              >
+                <option value="">Select Role</option>
+                <option>Patient</option>
+                <option>Doctor</option>
+              </select>
+            </div>
+
+            <div className="mb-3">
+              <label>Username:</label>
+              <input 
+                type="text" 
+                name="username" 
+                className="form-control" 
+                onChange={handleInput} 
+                required 
+              />
+            </div>
+
+            <div className="d-flex gap-2">
+              <button 
+                type="button" 
+                className="btn btn-outline-secondary flex-grow-1"
+                onClick={prevStep}
+              >
+                Back
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-primary flex-grow-1 gradient-background border-0"
+                onClick={nextStep}
+              >
+                Next
+              </button>
+            </div>
+          </>
+        )}
+
+        {formStep === 3 && (
+          <>
+            <div className="mb-3">
+              <label>Date of Birth:</label>
+              <input 
+                type="date" 
+                name="dob" 
+                className="form-control" 
+                onChange={handleInput} 
+                required 
+              />
+            </div>
+
+            <div className="mb-3">
+              <label>Gender:</label>
+              <select 
+                name="gender" 
+                className="form-control" 
+                onChange={handleInput} 
+                required
+              >
+                <option value="">Select Gender</option>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Other</option>
+              </select>
+            </div>
+
+            <div className="mb-3">
+              <label>Contact Number:</label>
+              <input 
+                type="tel" 
+                name="contact" 
+                className="form-control" 
+                onChange={handleInput} 
+                required 
+              />
+            </div>
+
+            <div className="d-flex gap-2">
+              <button 
+                type="button" 
+                className="btn btn-outline-secondary flex-grow-1"
+                onClick={prevStep}
+              >
+                Back
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-primary flex-grow-1 gradient-background border-0"
+                onClick={nextStep}
+              >
+                Next
+              </button>
+            </div>
+          </>
+        )}
+
+        {formStep === 4 && (
+          <>
+            <div className="mb-3">
+              <label>Address:</label>
+              <textarea 
+                name="address" 
+                className="form-control" 
+                onChange={handleInput} 
+                required
+              ></textarea>
+            </div>
+
+            <div className="mb-3">
+              <label>Blood Group:</label>
+              <select 
+                name="bloodGroup" 
+                className="form-control" 
+                onChange={handleInput} 
+                required
+              >
+                <option value="">Select Blood Group</option>
+                <option>A+</option>
+                <option>A-</option>
+                <option>B+</option>
+                <option>B-</option>
+                <option>AB+</option>
+                <option>AB-</option>
+                <option>O+</option>
+                <option>O-</option>
+              </select>
+            </div>
+
+            <div className="mb-3">
+              <label>Existing Allergies:</label>
+              <textarea 
+                name="allergies" 
+                className="form-control" 
+                onChange={handleInput}
+                placeholder="Optional"
+              ></textarea>
+            </div>
+
+            <div className="d-flex gap-2">
+              <button 
+                type="button" 
+                className="btn btn-outline-secondary flex-grow-1"
+                onClick={prevStep}
+              >
+                Back
+              </button>
+              <button 
+                type="submit" 
+                className="btn btn-success flex-grow-1 gradient-background border-0"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                ) : null}
+                Register
+              </button>
+            </div>
+          </>
+        )}
+      </form>
+    );
+  };
+
   return (
-    <div
-  className="d-flex justify-content-center align-items-center gradient-bg"
-  style={{
-    minHeight: "calc(100vh - 120px)", // Adjust if you know your navbar/footer height
-    backgroundColor: "#f8f9fa",
-    padding: "20px"
-  }}
->
-  <div
-    className="card p-4 shadow rounded w-100"
-    style={{
-      maxWidth: "500px",
-      maxHeight: "100%",
-      overflowY: "auto", // This makes the form scrollable within the card
-    }}
-  >
-    <h2 className="text-center mb-4 text">Welcome to <span style={{ color: "#5aa3e7" }}>Medi</span><span style={{ color: "#d73434" }}>Help</span></h2>
-    
-    {/* form starts here */}
-    <form onSubmit={mode === "signup" ? handleSignup : handleLogin}>
-      {/* common fields */}
+    <div className="d-flex justify-content-center align-items-center gradient-bg" style={{ minHeight: "calc(100vh - 120px)", padding: "20px" }}>
+      <div className="card p-4 shadow rounded w-100" style={{ maxWidth: "500px", maxHeight: "90vh", overflowY: "auto" }}>
+        <h2 className="text-center mb-4">
+          <span style={{ color: "#5aa3e7" }}>Medi</span>
+          <span style={{ color: "#d73434" }}>Help</span>
+        </h2>
+        
+        {formError && (
+          <div className="alert alert-danger" role="alert">{formError}</div>
+        )}
+        
+        {mode === "login" && <LoginHelper />}
+        
+        {mode === "login" ? (
+          <form onSubmit={handleLogin}>
+            <div className="mb-3">
+              <label>Email:</label>
+              <input type="email" className="form-control" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div className="mb-3">
+              <label>Password:</label>
+              <input type="password" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+            <button 
+              type="submit" 
+              className="btn btn-primary w-100 gradient-background border-0"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              ) : null}
+              Login
+            </button>
+          </form>
+        ) : (
+          <>
+            {formStep <= 4 && (
+              <div className="mb-4">
+                <div className="progress">
+                  <div 
+                    className="progress-bar" 
+                    role="progressbar" 
+                    style={{width: `${formStep * 25}%`}}
+                    aria-valuenow={formStep * 25} 
+                    aria-valuemin="0" 
+                    aria-valuemax="100"
+                  ></div>
+                </div>
+                <div className="d-flex justify-content-between mt-1">
+                  <small>Account</small>
+                  <small>Basic Info</small>
+                  <small>Details</small>
+                  <small>Medical</small>
+                </div>
+              </div>
+            )}
+            {renderSignupForm()}
+          </>
+        )}
 
-      <div className="mb-3">
-        <label>Email:</label>
-        <input type="email" className="form-control" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <p
+          className="text-center mt-3"
+          style={{ cursor: "pointer", color: "#007bff" }}
+          onClick={() => setMode(mode === "signup" ? "login" : "signup")}
+        >
+          {mode === "signup"
+            ? "Already have an account? Click to login"
+            : "New here? Click to sign up"}
+        </p>
       </div>
-      <div className="mb-3">
-        <label>Password:</label>
-        <input type="password" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} required />
-      </div>
-
-      {/* signup-specific fields */}
-      {mode === "signup" && (
-        <>
-        <hr></hr>
-        <div className="mb-3">
-            <label>Name:</label>
-            <input type="text" name="name" className="form-control" onChange={handleInput} required />
-          </div>
-         
-          <div className="mb-3">
-            <label>Role:</label>
-            <select className="form-control" name="role" onChange={handleInput} required>
-              <option value="">Select Role</option>
-              <option>Patient</option>
-              <option>Doctor</option>
-            </select>
-          </div>
-
-          <div className="mb-3">
-            <label>Username (Roll No./Doctor ID):</label>
-            <input type="text" name="username" className="form-control" onChange={handleInput} required />
-          </div>
-
-          <div className="mb-3">
-            <label>Date of Birth:</label>
-            <input type="date" name="dob" className="form-control" onChange={handleInput} required />
-          </div>
-
-          <div className="mb-3">
-            <label>Address:</label>
-            <textarea name="address" className="form-control" onChange={handleInput} required></textarea>
-          </div>
-
-          <div className="mb-3">
-            <label>Contact Number:</label>
-            <input type="tel" name="contact" className="form-control" onChange={handleInput} required />
-          </div>
-
-          <div className="mb-3">
-            <label>Blood Group:</label>
-            <input type="text" name="bloodGroup" className="form-control" onChange={handleInput} required />
-          </div>
-
-          <div className="mb-3">
-            <label>Gender:</label>
-            <select name="gender" className="form-control" onChange={handleInput} required>
-              <option value="">Select Gender</option>
-              <option>Male</option>
-              <option>Female</option>
-              <option>Other</option>
-            </select>
-          </div>
-
-          <div className="mb-3">
-            <label>Existing Allergies:</label>
-            <textarea name="allergies" className="form-control" onChange={handleInput}></textarea>
-          </div>
-        </>
-      )}
-
-      <button type="submit" className="btn btn-success w-100 gradient-background border-0">
-        {mode === "signup" ? "Sign Up" : "Login"}
-      </button>
-
-      <p
-        className="text-center mt-3"
-        style={{ cursor: "pointer", color: "#007bff" }}
-        onClick={() => setMode(mode === "signup" ? "login" : "signup")}
-      >
-        {mode === "signup"
-          ? "Already have an account? Click to login"
-          : "New here? Click to sign up"}
-      </p>
-    </form>
-  </div>
-</div>
-
-    
-    
-//     <div className="d-flex justify-content-center align-items-center vh-100 bg-light ">
-//     <div className="card p-4 shadow rounded" style={{ width: "100%", maxWidth: "500px" }}>
-//       <h2 className="text-center mb-4 text-primary">Welcome to  <span style={{ color: "#5aa3e7" }}>Medi</span>
-//       <span style={{ color: "#d73434" }}>Help</span></h2>
-  
-//       {!mode && (
-//         <div className="text-center">
-//           <p className="mb-3">What would you like to do?</p>
-//           <button className="btn btn-primary me-2 gradient-background btn-outline-none" onClick={() => setMode("signup")}>Sign Up</button>
-//           <button className="btn btn-outline-secondary" onClick={() => setMode("login")}>Login</button>
-//         </div>
-//       )}
-  
-//       {(mode === "signup" || mode === "login") && (
-//         <form onSubmit={mode === "signup" ? handleSignup : handleLogin} className="mt-3">
-  
-//           {/* Common Fields */}
-//           <div className="mb-3">
-//             <label>Email:</label>
-//             <input type="email" className="form-control" value={email} onChange={(e) => setEmail(e.target.value)} required />
-//           </div>
-  
-//           <div className="mb-3">
-//             <label>Password:</label>
-//             <input type="password" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} required />
-//           </div>
-  
-//           {/* Signup-specific Fields */}
-//           {mode === "signup" && (
-//             <>
-//               <div className="mb-3">
-//                 <label>Role:</label>
-//                 <select className="form-control" name="role" onChange={handleInput} required>
-//                   <option value="">Select Role</option>
-//                   <option>Patient</option>
-//                   <option>Doctor</option>
-//                 </select>
-//               </div>
-  
-//               <div className="mb-3">
-//                 <label>Username (Roll No./Doctor ID):</label>
-//                 <input type="text" name="username" className="form-control" onChange={handleInput} required />
-//               </div>
-  
-//               <div className="mb-3">
-//                 <label>Date of Birth:</label>
-//                 <input type="date" name="dob" className="form-control" onChange={handleInput} required />
-//               </div>
-  
-//               <div className="mb-3">
-//                 <label>Address:</label>
-//                 <textarea name="address" className="form-control" onChange={handleInput} required></textarea>
-//               </div>
-  
-//               <div className="mb-3">
-//                 <label>Contact Number:</label>
-//                 <input type="tel" name="contact" className="form-control" onChange={handleInput} required />
-//               </div>
-  
-//               <div className="mb-3">
-//                 <label>Blood Group:</label>
-//                 <input type="text" name="bloodGroup" className="form-control" onChange={handleInput} required />
-//               </div>
-  
-//               <div className="mb-3">
-//                 <label>Gender:</label>
-//                 <select name="gender" className="form-control" onChange={handleInput} required>
-//                   <option value="">Select Gender</option>
-//                   <option>Male</option>
-//                   <option>Female</option>
-//                   <option>Other</option>
-//                 </select>
-//               </div>
-  
-//               <div className="mb-3">
-//                 <label>Existing Allergies:</label>
-//                 <textarea name="allergies" className="form-control" onChange={handleInput}></textarea>
-//               </div>
-//             </>
-//           )}
-  
-//           <button type="submit" className="btn btn-success w-100">
-//             {mode === "signup" ? "Sign Up" : "Login"}
-//           </button>
-  
-//           <p
-//             className="text-center mt-3"
-//             style={{ cursor: "pointer", color: "#007bff" }}
-//             onClick={() => setMode(mode === "signup" ? "login" : "signup")}
-//           >
-//             {mode === "signup"
-//               ? "Already have an account? Click to login"
-//               : "New here? Click to sign up"}
-//           </p>
-//         </form>
-//       )}
-//     </div>
-//   </div>
-  
+    </div>
   );
 };
 

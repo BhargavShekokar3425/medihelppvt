@@ -1,4 +1,4 @@
-import { auth, db } from "./config";
+import { auth } from "./config";
 import { setupDatabase, initializeUserData } from "../utils/dbSetup";
 import { onAuthStateChanged } from "firebase/auth";
 

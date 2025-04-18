@@ -1,7 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useBackendContext } from "../contexts/BackendContext";
 
 const NavBar = () => {
+  const { currentUser } = useBackendContext();
+  
   return (
     <div className="nav-scroller pt-0.5 pb-3 mb-4">
       <nav className="nav d-flex justify-content-between">
@@ -29,19 +32,30 @@ const NavBar = () => {
           <img src="/assets/medicine.svg" width="47" alt="Prescription Hub" className="nav-icon"/>
           <div>Prescription Hub</div> 
         </Link>
-
         <Link className="p-2 text-dark spl_text" style={{ fontWeight: "bolder" }} to="/community-forum">
           <img src="/assets/DocExchange.svg" width="47" alt="Community Forum" className="nav-icon" />
           <div>DocExchange</div>
         </Link>
-
         <Link className="p-2 text-dark spl_text" style={{ fontWeight: "bolder" }} to="/reviews">
           <img src="/assets/popular-hc.png" width="47" alt="Reviews" className="nav-icon"/>
           <div>Reviews</div> 
         </Link>
-        
-       
       </nav>
+      
+      {/* Optional: Display mini login status at the bottom of navbar */}
+      <div className="d-flex justify-content-end mt-1">
+        <small className="text-muted">
+          {currentUser ? (
+            <span>
+              <span className="text-success">●</span> {currentUser.name} ({currentUser.role})
+            </span>
+          ) : (
+            <Link to="/signup" className="text-decoration-none">
+              <span className="text-danger">●</span> Not logged in - Sign in here
+            </Link>
+          )}
+        </small>
+      </div>
     </div>
   );
 };

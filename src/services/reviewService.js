@@ -1,232 +1,143 @@
-import { 
-  collection, 
-  addDoc, 
-  getDocs,
-  getDoc,
-  doc,
-  query,
-  where, 
-  orderBy,
-  serverTimestamp,
-  updateDoc,
-  deleteDoc,
-  limit
-} from "firebase/firestore";
-import { db } from "../firebase/config";
+import apiService from './apiService';
 
 export const reviewService = {
-  // Add a new review
-  addReview: async (patientId, doctorId, reviewData) => {
+  // Add a new review - can be for doctor or app
+  addReview: async (reviewData) => {
     try {
-      const reviewDoc = {
-        patientId,
-        doctorId,
-        ...reviewData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      };
+      const response = await apiService.post('/reviews', reviewData);
       
-      const docRef = await addDoc(collection(db, "reviews"), reviewDoc);
-      
-      // Update doctor's average rating
-      await updateDoctorRating(doctorId);
-      
-      return {
-        id: docRef.id,
-        ...reviewDoc
-      };
+      console.log(`Review added successfully for ${reviewData.reviewType}`);
+      return response;
     } catch (error) {
       console.error("Add review error:", error);
       throw error;
     }
   },
   
+  // Add a doctor review
+  addDoctorReview: async (doctorId, reviewData) => {
+    try {
+      console.log("Adding doctor review:", { doctorId, ...reviewData });
+      const response = await apiService.post('/reviews', {
+        doctorId,
+        reviewType: 'doctor',
+        ...reviewData
+      });
+      
+      console.log("Review added successfully for doctor:", doctorId);
+      return response;
+    } catch (error) {
+      console.error("Add doctor review error:", error);
+      
+      // Enhanced error message for debugging
+      let errorMessage = "Failed to add review";
+      if (error.response) {
+        errorMessage = `Server error: ${error.response.data?.message || error.response.status}`;
+      } else if (error.request) {
+        errorMessage = "Network error: The server did not respond";
+      } else {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
+      throw new Error(errorMessage);
+    }
+  },
+  
+  // Add an app review
+  addAppReview: async (reviewData) => {
+    try {
+      console.log("Adding app review:", reviewData);
+      const response = await apiService.post('/reviews', {
+        reviewType: 'app',
+        ...reviewData
+      });
+      
+      console.log("App review added successfully");
+      return response;
+    } catch (error) {
+      console.error("Add app review error:", error);
+      
+      // Enhanced error message for debugging
+      let errorMessage = "Failed to add review";
+      if (error.response) {
+        errorMessage = `Server error: ${error.response.data?.message || error.response.status}`;
+      } else if (error.request) {
+        errorMessage = "Network error: The server did not respond";
+      } else {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
+      throw new Error(errorMessage);
+    }
+  },
+  
   // Get reviews for a doctor
   getDoctorReviews: async (doctorId) => {
     try {
-      const q = query(
-        collection(db, "reviews"),
-        where("doctorId", "==", doctorId),
-        orderBy("createdAt", "desc")
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const reviews = [];
-      
-      for (const reviewDoc of querySnapshot.docs) {
-        const reviewData = reviewDoc.data();
-        
-        // Get patient information
-        const patientDoc = await getDoc(doc(db, "users", reviewData.patientId));
-        
-        reviews.push({
-          id: reviewDoc.id,
-          ...reviewData,
-          patient: patientDoc.exists() ? {
-            id: patientDoc.id,
-            name: patientDoc.data().name,
-            photoURL: patientDoc.data().photoURL
-          } : null
-        });
-      }
-      
-      return reviews;
+      const response = await apiService.get(`/reviews/doctor/${doctorId}`);
+      return response;
     } catch (error) {
       console.error("Get doctor reviews error:", error);
       throw error;
     }
   },
   
-  // Get reviews by a patient
-  getPatientReviews: async (patientId) => {
+  // Get app reviews
+  getAppReviews: async () => {
     try {
-      const q = query(
-        collection(db, "reviews"),
-        where("patientId", "==", patientId),
-        orderBy("createdAt", "desc")
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const reviews = [];
-      
-      for (const reviewDoc of querySnapshot.docs) {
-        const reviewData = reviewDoc.data();
-        
-        // Get doctor information
-        const doctorDoc = await getDoc(doc(db, "users", reviewData.doctorId));
-        
-        reviews.push({
-          id: reviewDoc.id,
-          ...reviewData,
-          doctor: doctorDoc.exists() ? {
-            id: doctorDoc.id,
-            name: doctorDoc.data().name,
-            specialization: doctorDoc.data().specialization,
-            photoURL: doctorDoc.data().photoURL
-          } : null
-        });
-      }
-      
-      return reviews;
+      const response = await apiService.get('/reviews/app');
+      return response;
     } catch (error) {
-      console.error("Get patient reviews error:", error);
+      console.error("Get app reviews error:", error);
       throw error;
     }
   },
   
   // Get top rated doctors
-  getTopRatedDoctors: async (limit = 10) => {
+  getTopRatedDoctors: async (limit = 5) => {
     try {
-      const q = query(
-        collection(db, "users"),
-        where("userType", "==", "doctor"),
-        where("averageRating", ">=", 4),
-        orderBy("averageRating", "desc"),
-        limit(limit)
-      );
-      
-      const querySnapshot = await getDocs(q);
-      
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const response = await apiService.get('/reviews/top-rated', { params: { limit } });
+      return response;
     } catch (error) {
       console.error("Get top rated doctors error:", error);
       throw error;
     }
   },
   
-  // Update a review
+  // Get all public reviews (paginated)
+  getAllReviews: async (page = 1, limit = 10) => {
+    try {
+      const response = await apiService.get('/reviews', { 
+        params: { page, limit } 
+      });
+      return response;
+    } catch (error) {
+      console.error("Get all reviews error:", error);
+      throw error;
+    }
+  },
+  
+  // Update a review - can only be done by the author
   updateReview: async (reviewId, reviewData) => {
     try {
-      const reviewRef = doc(db, "reviews", reviewId);
-      const reviewDoc = await getDoc(reviewRef);
-      
-      if (!reviewDoc.exists()) {
-        throw new Error("Review not found");
-      }
-      
-      await updateDoc(reviewRef, {
-        ...reviewData,
-        updatedAt: serverTimestamp()
-      });
-      
-      // Update doctor's average rating
-      const doctorId = reviewDoc.data().doctorId;
-      await updateDoctorRating(doctorId);
-      
-      return {
-        id: reviewId,
-        ...reviewDoc.data(),
-        ...reviewData
-      };
+      const response = await apiService.put(`/reviews/${reviewId}`, reviewData);
+      return response;
     } catch (error) {
       console.error("Update review error:", error);
       throw error;
     }
   },
   
-  // Delete a review
+  // Delete a review - can only be done by the author
   deleteReview: async (reviewId) => {
     try {
-      const reviewRef = doc(db, "reviews", reviewId);
-      const reviewDoc = await getDoc(reviewRef);
-      
-      if (!reviewDoc.exists()) {
-        throw new Error("Review not found");
-      }
-      
-      const doctorId = reviewDoc.data().doctorId;
-      
-      // Delete the review
-      await deleteDoc(reviewRef);
-      
-      // Update doctor's average rating
-      await updateDoctorRating(doctorId);
+      const response = await apiService.delete(`/reviews/${reviewId}`);
+      return response;
     } catch (error) {
       console.error("Delete review error:", error);
       throw error;
     }
   }
 };
-
-// Helper function to update doctor's average rating
-async function updateDoctorRating(doctorId) {
-  try {
-    const q = query(
-      collection(db, "reviews"),
-      where("doctorId", "==", doctorId)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) {
-      // No reviews, reset rating to 0
-      await updateDoc(doc(db, "users", doctorId), {
-        averageRating: 0,
-        totalReviews: 0
-      });
-      return;
-    }
-    
-    // Calculate new average
-    let totalRating = 0;
-    querySnapshot.docs.forEach(doc => {
-      totalRating += doc.data().rating;
-    });
-    
-    const averageRating = totalRating / querySnapshot.docs.length;
-    
-    // Update doctor document
-    await updateDoc(doc(db, "users", doctorId), {
-      averageRating,
-      totalReviews: querySnapshot.docs.length
-    });
-  } catch (error) {
-    console.error("Update doctor rating error:", error);
-    throw error;
-  }
-}
 
 export default reviewService;

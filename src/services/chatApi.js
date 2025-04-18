@@ -1,7 +1,3 @@
-// Mock API base URL - in a real app, this would point to your backend server
-const API_BASE_URL = 'http://localhost:5000/api';
-const SOCKET_URL = 'http://localhost:5000';
-
 /**
  * This is a mock implementation of the Chat API Service.
  * It simulates API responses for demonstration without requiring real backend connectivity.

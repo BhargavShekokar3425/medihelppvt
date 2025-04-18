@@ -1,0 +1,7 @@
+{
+  "verbose": true,
+  "ignore": ["*.test.js", "data/db/*", "node_modules/*"],
+  "delay": "1500",
+  "watch": ["server.js", "routes/*", "controllers/*", "models/*", "utils/*"],
+  "ext": "js,json"
+}

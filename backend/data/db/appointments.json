@@ -1,0 +1,41 @@
+[
+  {
+    "id": "apt1",
+    "patientId": "1",
+    "patientName": "Test User",
+    "doctorId": "d1",
+    "doctorName": "Dr. Neha Sharma",
+    "date": "2023-06-15",
+    "timeSlot": "10:00 AM",
+    "reason": "Regular checkup",
+    "status": "completed",
+    "notes": "Patient is doing well",
+    "createdAt": "2023-06-10T10:00:00Z"
+  },
+  {
+    "id": "apt2",
+    "patientId": "1",
+    "patientName": "Test User",
+    "doctorId": "d2",
+    "doctorName": "Dr. Shikha Chibber",
+    "date": "2023-06-20",
+    "timeSlot": "2:00 PM",
+    "reason": "Follow-up",
+    "status": "pending",
+    "createdAt": "2023-06-15T10:00:00Z"
+  },
+  {
+    "id": "apt_1744978930991",
+    "patientId": "p1",
+    "patientName": "Test Patient",
+    "doctorId": "d1",
+    "doctorName": "Dr. Neha Sharma",
+    "date": "2025-04-18",
+    "timeSlot": "10:30 AM",
+    "reason": "App1",
+    "status": "completed",
+    "createdAt": "2025-04-18T12:22:10.991Z",
+    "notes": "App1",
+    "updatedAt": "2025-04-18T12:32:06.143Z"
+  }
+]

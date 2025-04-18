@@ -1,0 +1,61 @@
+[
+  {
+    "id": "rev1",
+    "doctorId": "d1",
+    "doctor": {
+      "id": "d1",
+      "name": "Dr. Neha Sharma",
+      "specialization": "Cardiology",
+      "avatar": "/assets/femme.jpeg"
+    },
+    "authorId": "1",
+    "author": {
+      "id": "1",
+      "name": "Test User",
+      "avatar": null
+    },
+    "rating": 5,
+    "title": "Excellent doctor!",
+    "content": "Dr. Neha was very professional and took the time to explain everything clearly.",
+    "createdAt": "2023-06-12T08:00:00Z",
+    "isPublic": true,
+    "reviewType": "doctor"
+  },
+  {
+    "id": "rev2",
+    "doctorId": "d2",
+    "doctor": {
+      "id": "d2",
+      "name": "Dr. Shikha Chibber",
+      "specialization": "Neurology",
+      "avatar": "/assets/fem.jpeg"
+    },
+    "authorId": "1",
+    "author": {
+      "id": "1",
+      "name": "Test User",
+      "avatar": null
+    },
+    "rating": 4,
+    "title": "Good experience",
+    "content": "Dr. Shikha was knowledgeable and helpful.",
+    "createdAt": "2023-06-14T09:30:00Z",
+    "isPublic": true,
+    "reviewType": "doctor"
+  },
+  {
+    "id": "rev3",
+    "authorId": "1",
+    "author": {
+      "id": "1",
+      "name": "Test User",
+      "avatar": null
+    },
+    "rating": 5,
+    "title": "Great app!",
+    "content": "The app is very user-friendly and helpful.",
+    "createdAt": "2023-06-16T10:00:00Z",
+    "isPublic": true,
+    "reviewType": "app"
+  }
+]
