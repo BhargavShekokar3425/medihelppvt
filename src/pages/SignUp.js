@@ -148,7 +148,7 @@ const SignUp = () => {
         </>
       )}
 
-      <button type="submit" className="btn btn-success w-100">
+      <button type="submit" className="btn btn-success w-100 gradient-background border-0">
         {mode === "signup" ? "Sign Up" : "Login"}
       </button>
 
