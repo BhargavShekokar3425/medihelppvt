@@ -349,12 +349,19 @@ export default function AppointmentScheduler() {
       borderRadius: '50%',
       objectFit: 'cover',
       marginBottom: '8px',
-      border: '2px solid transparent',
+      border: '2px solid transparent', // <== Important
       transition: 'border-color 0.2s ease'
     },
     activeStaffImage: {
       borderColor: '#3b82f6'
     },
+    staffImageHover: {
+      borderColor: '#999',
+      transition: 'border-color 0.2s ease-in-out'
+    },
+  
+
+    
     staffName: {
       fontSize: '14px',
       textAlign: 'center',
@@ -367,12 +374,12 @@ export default function AppointmentScheduler() {
 
   // Staff members data
   const [staffMembers] = useState([
-    { id: 1, name: 'Dr. Neha Sharma', image: '/api/placeholder/60/60' },
-    { id: 2, name: 'Dr. Shikha Chibber', image: '/api/placeholder/60/60' },
-    { id: 3, name: 'Dr. Ayurvedic Specialists', image: '/api/placeholder/60/60' },
-    { id: 4, name: 'Dr. Vibha Dubey', image: '/api/placeholder/60/60' },
-    { id: 5, name: 'Dr. Shweta Singh', image: '/api/placeholder/60/60' },
-    { id: 6, name: 'Dr. Misha Goyal', image: '/api/placeholder/60/60' }
+    { id: 1, name: 'Dr. Neha Sharma', image: '/assets/femme.jpeg' },
+    { id: 2, name: 'Dr. Shikha Chibber', image: '/assets/fem.jpeg' },
+    { id: 3, name: 'Dr. Ayurvedic Specialists', image: '/assets/doctorman.avif' },
+    { id: 4, name: 'Dr. Vibha Dubey', image: '/assets/femmedocie.jpg' },
+    { id: 5, name: 'Dr. Shweta Singh', image: '/assets/cutu.jpeg' },
+    { id: 6, name: 'Dr. Misha Goyal', image: '/assets/vcutu.jpg' }
   ]);
   
   // Currently selected staff member
