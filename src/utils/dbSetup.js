@@ -1,26 +1,9 @@
-import { collection, doc, setDoc, getDoc } from "firebase/firestore";
-import { db } from "../firebase/config";
+// Mock database setup functions since we're no longer using Firebase
 
 // Function to ensure basic database structure is set up
 export const setupDatabase = async () => {
   try {
-    // Check if the users collection exists and has a default admin
-    const adminRef = doc(db, "users", "admin");
-    const adminDoc = await getDoc(adminRef);
-    
-    if (!adminDoc.exists()) {
-      // Create admin user if it doesn't exist
-      await setDoc(adminRef, {
-        name: "System Administrator",
-        email: "admin@medihelp.com",
-        userType: "admin",
-        createdAt: new Date().toISOString(),
-        isActive: true
-      });
-      console.log("Created admin user");
-    }
-    
-    console.log("Database setup complete");
+    console.log("Mock database setup complete");
     return true;
   } catch (error) {
     console.error("Database setup error:", error);
@@ -31,27 +14,7 @@ export const setupDatabase = async () => {
 // Initialize any necessary fields on a user document
 export const initializeUserData = async (userId, userData) => {
   try {
-    const userRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userRef);
-    
-    if (userDoc.exists()) {
-      // User exists, check if they have the necessary fields
-      const existingData = userDoc.data();
-      
-      // Fields that should be initialized if they don't exist
-      const fieldsToInitialize = {
-        conversations: existingData.conversations || [],
-        online: existingData.online || false,
-        lastSeen: existingData.lastSeen || new Date().toISOString(),
-        unreadMessages: existingData.unreadMessages || 0,
-        ...userData
-      };
-      
-      // Update the user document
-      await setDoc(userRef, fieldsToInitialize, { merge: true });
-      console.log("Initialized user data for:", userId);
-    }
-    
+    console.log("Mock user initialization complete");
     return true;
   } catch (error) {
     console.error("User initialization error:", error);
@@ -59,4 +22,6 @@ export const initializeUserData = async (userId, userData) => {
   }
 };
 
-export default { setupDatabase, initializeUserData };
+const dbSetupUtils = { setupDatabase, initializeUserData };
+
+export default dbSetupUtils;

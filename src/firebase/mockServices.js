@@ -69,10 +69,9 @@ export const mockFirestore = {
       mockData[collectionName][id] = { id, ...data, createdAt: new Date() };
       return { id };
     },
-    where: (field, operator, value) => ({
+    where: () => ({
       get: async () => ({
         docs: Object.entries(mockData[collectionName] || {})
-          .filter(([_, doc]) => doc[field] === value)
           .map(([id, doc]) => ({
             id,
             data: () => doc,
@@ -87,7 +86,7 @@ export const mockFirestore = {
 // Mock storage
 export const mockStorage = {
   ref: (path) => ({
-    put: async (file) => ({ 
+    put: async () => ({ 
       ref: { getDownloadURL: async () => `https://mock-url.com/${path}` }
     }),
     getDownloadURL: async () => `https://mock-url.com/${path}`,
@@ -100,7 +99,7 @@ export const serverTimestamp = () => new Date();
 export const arrayUnion = (element) => [element];
 export const arrayRemove = (element) => [];
 
-export default {
+const mockFirebaseServices = {
   auth: mockAuth,
   firestore: mockFirestore,
   storage: mockStorage,
@@ -108,3 +107,5 @@ export default {
   arrayUnion,
   arrayRemove
 };
+
+export default mockFirebaseServices;
