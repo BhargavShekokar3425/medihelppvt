@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 
 const NewPostModal = ({ communityType, onClose, onSubmit }) => {
   const [title, setTitle] = useState('');
@@ -135,6 +136,11 @@ const NewPostModal = ({ communityType, onClose, onSubmit }) => {
       </div>
     </div>
   );
+};
+NewPostModal.propTypes = {
+  communityType: PropTypes.string.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
 };
 
 export default NewPostModal;

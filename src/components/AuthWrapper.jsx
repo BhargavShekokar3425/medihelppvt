@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useBackendContext } from '../contexts/BackendContext';
+import PropTypes from 'prop-types';
 
 // Component that requires authentication to access
 const AuthWrapper = ({ children, requiredRole }) => {
@@ -36,6 +37,10 @@ const AuthWrapper = ({ children, requiredRole }) => {
   
   // User is authenticated, render children
   return children;
+};
+AuthWrapper.propTypes = {
+  children: PropTypes.node,
+  requiredRole: PropTypes.string.isRequired,
 };
 
 export default AuthWrapper;

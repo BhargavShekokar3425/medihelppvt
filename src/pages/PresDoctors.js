@@ -1,9 +1,6 @@
 import { useState,useEffect } from "react";
 import Footer from "../components/Footer"; 
 
-
-
-
 function PrescDoc(){
   const [cartCount, setCartCount] = useState(0);
   const [cartItems, setCartItems] = useState([]);
@@ -110,7 +107,7 @@ function PrescDoc(){
 
           <div className="jumbotron gradient-background p-4 p-md-5 text-white rounded bg-dark" style={{marginBottom: "32px"}} >
             <div className="col px-0 " style={{color:"black"}}>
-              <h1 className="display-4 font-italic" >Doctor's Prescription Portal</h1>
+              <h1 className="display-4 font-italic" >Doctor&apos;s Prescription Portal</h1>
             </div>
           </div>
        
@@ -206,8 +203,8 @@ function PrescDoc(){
        
         {/* <!---BILLING ADDRESS--> */}
         <div className="col-md-7 col-lg-8">
-            <h4 className="mb-3"><span style={{color: "#5aa3e7"}}>Doctor's</span>  <span style={{color: "#d73434"}}>ID</span></h4>
-            <form className="needs-validation" novalidate="">
+            <h4 className="mb-3"><span style={{color: "#5aa3e7"}}>Doctor&apos;s</span>  <span style={{color: "#d73434"}}>ID</span></h4>
+            <form className="needs-validation" noValidate>
               <div className="row g-3">
                 <div className="col-sm-6">
                   <label htmlFor="firstName" className="form-label">First name *</label>
@@ -226,7 +223,7 @@ function PrescDoc(){
                 </div>
     
                 <div className="col-12">
-                  <label for="username" className="form-label">Username *</label>
+                  <label htmlFor="username" className="form-label">Username *</label>
                   <div className="input-group has-validation">
                     <span className="input-group-text">@</span>
                     <input type="text" className="form-control" id="username" placeholder="Username" required/>
@@ -237,13 +234,13 @@ function PrescDoc(){
                 </div>
 
                 <form className="card p-2">
-                    <label for="image-upload" className="form-label"><strong>Upload Signature</strong></label>
+                    <label htmlFor="image-upload" className="form-label"><strong>Upload Signature</strong></label>
                     <input type="file" className="form-control mb-2" id="image-upload" accept="image/*" required/>
                     <button type="button" className="btn btn-primary gradient-bg" id="upload-btn">Upload</button>
                 </form>
 
                 <hr/>
-                <h4 className="mb-1"><span style={{color: "#5aa3e7"}}>Patient's</span><span style={{color: "#d73434"}} >Address</span></h4>
+                <h4 className="mb-1"><span style={{color: "#5aa3e7"}}>Patient&apos;s</span><span style={{color: "#d73434"}} >Address</span></h4>
                 <br></br>
                 <br></br>
                 <br></br>
@@ -252,7 +249,7 @@ function PrescDoc(){
 
                 <div className="row g-3">
                   <div className="col-sm-6">
-                <label for="firstName" className="form-label">First name *</label>
+                <label htmlFor="firstName" className="form-label">First name *</label>
                 <input type="text" className="form-control" id="firstName" placeholder="Enter Your First Name"  required/>
                 <div className="invalid-feedback">
                   Valid first name is required.
@@ -260,7 +257,7 @@ function PrescDoc(){
               </div>
   
               <div className="col-sm-6">
-                <label for="lastName" className="form-label">Last name *</label>
+                <label htmlFor="lastName" className="form-label">Last name *</label>
                 <input type="text" className="form-control" id="lastName" placeholder="Enter Your Last Name"  required/>
                 <div className="invalid-feedback">
                   Valid last name is required.
@@ -268,7 +265,7 @@ function PrescDoc(){
               </div>
   
               <div className="col-12">
-                <label for="username" className="form-label">Username *</label>
+                <label htmlFor="username" className="form-label">Username *</label>
                 <div className="input-group has-validation">
                   <span className="input-group-text">@</span>
                   <input type="text" className="form-control" id="username" placeholder="Username" required/>
@@ -279,7 +276,7 @@ function PrescDoc(){
               </div>
   
               <div className="col-12">
-                <label for="email" className="form-label">Email *</label>
+                <label htmlFor="email" className="form-label">Email *</label>
                 <input type="email" className="form-control" id="email" placeholder="you@example.com" required/>
                 <div className="invalid-feedback">
                   Please enter a valid email address for shipping updates.
@@ -287,7 +284,7 @@ function PrescDoc(){
               </div>
   
               <div className="col-12">
-                <label for="address" className="form-label">Address *</label>
+                <label htmlFor="address" className="form-label">Address *</label>
                 <input type="text" className="form-control" id="address" placeholder="1234 Main St" required/>
                 <div className="invalid-feedback">
                   Please enter your shipping address.
@@ -295,7 +292,7 @@ function PrescDoc(){
               </div>
   
               <div className="col-12">
-                <label for="address2" className="form-label">Address 2 <span className="text-body-secondary">(Optional)</span></label>
+                <label htmlFor="address2" className="form-label">Address 2 <span className="text-body-secondary">(Optional)</span></label>
                 <input type="text" className="form-control" id="address2" placeholder="Apartment or suite"/>
               </div>
   
@@ -321,7 +318,7 @@ function PrescDoc(){
               </div>
   
               <div className="col-md-3">
-                <label for="zip" className="form-label">Zip *</label>
+                <label htmlFor="zip" className="form-label">Zip *</label>
                 <input type="text" className="form-control" id="zip" placeholder="" required/>
                 <div className="invalid-feedback">
                   Zip code required.
@@ -334,12 +331,12 @@ function PrescDoc(){
   
             <div className="form-check">
               <input type="checkbox" className="form-check-input" id="same-address"/>
-              <label className="form-check-label" for="same-address">Shipping address is the same as billing address</label>
+              <label className="form-check-label" htmlFor="same-address">Shipping address is the same as billing address</label>
             </div>
   
             <div className="form-check">
               <input type="checkbox" className="form-check-input" id="save-info"/>
-              <label className="form-check-label" for="save-info">Save this information for next time</label>
+              <label className="form-check-label" htmlFor="save-info">Save this information for next time</label>
             </div>
   
             <hr className="my-4"/>
