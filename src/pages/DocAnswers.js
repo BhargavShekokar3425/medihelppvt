@@ -3,32 +3,24 @@ import { chatApi } from "../services/chatApi";
 
 const DocAnswers = () => {
   // State variables
-  const [userType, setUserType] = useState("");
+  const [contacts, setContacts] = useState({ patient: [], doctor: [], pharmacy: [] });
   const [selectedContact, setSelectedContact] = useState(null);
   const [message, setMessage] = useState("");
   const [conversations, setConversations] = useState({});
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [contacts, setContacts] = useState({ patient: [], doctor: [], pharmacy: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [messageLoading, setMessageLoading] = useState(false);
+  const [currentConversationId, setCurrentConversationId] = useState(null);
   const socketRef = useRef(null);
   const messageEndRef = useRef(null);
-  
-  // Add new state variables for login form
-  const [loginUsername, setLoginUsername] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [messageLoading, setMessageLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [currentConversationId, setCurrentConversationId] = useState(null);
   
   // Load user data
   const loadUserData = async () => {
     try {
       const userData = await chatApi.getCurrentUser();
       setCurrentUser(userData);
-      setUserType(userData.type);
       setIsLoggedIn(true);
       
       // Connect websocket
@@ -55,7 +47,7 @@ const DocAnswers = () => {
     } else {
       setLoading(false);
     }
-  }, []);  // Empty dependency array
+  }, [loadUserData]);  // Add loadUserData as a dependency
   
   // Connect to WebSocket
   const connectToSocket = () => {
@@ -227,86 +219,6 @@ const DocAnswers = () => {
     }
   };
 
-  // Handle login
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const userData = await chatApi.login({
-        email: loginUsername,
-        password: loginPassword,
-        type: userType
-      });
-      
-      setCurrentUser(userData.user);
-      setIsLoggedIn(true);
-      
-      // Connect websocket
-      connectToSocket();
-      
-      // Load conversations and contacts
-      await Promise.all([
-        loadConversations(),
-        loadContacts(userData.user.type)
-      ]);
-      
-      setLoginUsername("");
-      setLoginPassword("");
-    } catch (error) {
-      console.error('Login error:', error);
-      setError('Login failed. Check your credentials.');
-    }
-  };
-
-  // Handle logout
-  const handleLogout = async () => {
-    try {
-      await chatApi.logout();
-      setIsLoggedIn(false);
-      setCurrentUser(null);
-      setUserType("");
-      setSelectedContact(null);
-      setConversations({});
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
-  // Select a contact to chat with
-  const selectContact = async (contact) => {
-    setSelectedContact(contact);
-    try {
-      // Clear any previous errors
-      setError(null);
-      
-      // Create or get the conversation with this contact
-      const conversation = await chatApi.getOrCreateConversation(contact._id);
-      
-      // Get messages for this conversation
-      const messages = await chatApi.getMessages(conversation.id);
-      
-      // Update state
-      setConversations(prev => ({
-        ...prev,
-        [conversation.id]: messages
-      }));
-      
-      // Mark messages as read
-      if (messages && messages.length > 0) {
-        for (const msg of messages) {
-          if (msg.sender !== currentUser._id && !msg.readBy?.includes(currentUser._id)) {
-            chatApi.markAsRead(msg._id);
-          }
-        }
-      }
-      
-      // Store the current conversation ID for easy reference
-      setCurrentConversationId(conversation.id);
-    } catch (error) {
-      console.error('Error selecting contact:', error);
-      setError('Failed to load conversation');
-    }
-  };
-
   // Handle sending messages
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -370,6 +282,20 @@ const DocAnswers = () => {
     }
   };
 
+  // Handle selecting a contact and setting the current conversation
+  const handleSelectContact = (contact) => {
+    setSelectedContact(contact);
+    // Find or create a conversation with this contact
+    const conversationId = Object.keys(conversations).find(id => {
+      return conversations[id].some(
+        msg =>
+          (msg.sender === contact._id || msg.receiver === contact._id) &&
+          (msg.sender === currentUser._id || msg.receiver === currentUser._id)
+      );
+    });
+    setCurrentConversationId(conversationId || null);
+  };
+
   // Return JSX for the component
   return (
     <div className="chat-page">
@@ -382,12 +308,11 @@ const DocAnswers = () => {
               Get your medical questions answered and manage your prescriptions efficiently.
             </p>
             {isLoggedIn && currentUser && (
-              // Rest of your JSX
               <div>User is logged in</div>
             )}
           </div>
         </div>
-        
+
         {loading ? (
           <div className="text-center p-5">
             <div className="spinner-border text-primary" role="status">
@@ -398,11 +323,66 @@ const DocAnswers = () => {
         ) : error ? (
           <div className="alert alert-danger">{error}</div>
         ) : !isLoggedIn ? (
-          // Login form JSX
           <div>Login form</div>
         ) : (
-          // Chat interface JSX
-          <div>Chat interface</div>
+          // Chat interface
+          <div className="row">
+            <div className="col-md-4">
+              <h5>Contacts</h5>
+              {Object.entries(contacts).map(([type, contactList]) => (
+                <div key={type}>
+                  <h6 className="mt-3 text-capitalize">{type}</h6>
+                  <ul className="list-group">
+                    {contactList.map(contact => (
+                      <li
+                        key={contact._id}
+                        className={`list-group-item ${selectedContact && selectedContact._id === contact._id ? "active" : ""}`}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handleSelectContact(contact)}
+                      >
+                        {contact.name} <span className={`badge bg-${contact.status === "online" ? "success" : "secondary"}`}>{contact.status}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <div className="col-md-8">
+              {selectedContact && (
+                <div>
+                  <h5>Chat with {selectedContact.name}</h5>
+                  <div style={{ height: "300px", overflowY: "auto", border: "1px solid #ccc", borderRadius: "8px", padding: "10px", marginBottom: "10px" }}>
+                    {(conversations[currentConversationId] || []).map(msg => (
+                      <div key={msg._id || msg.id} style={{ marginBottom: "8px", textAlign: msg.sender === currentUser._id ? "right" : "left" }}>
+                        <span className={`badge bg-${msg.sender === currentUser._id ? "primary" : "secondary"}`}>
+                          {msg.body || (msg.isTyping ? "Typing..." : "")}
+                        </span>
+                      </div>
+                    ))}
+                    <div ref={messageEndRef}></div>
+                  </div>
+                  <form onSubmit={sendMessage}>
+                    <div className="input-group">
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Type your message..."
+                        value={message}
+                        onChange={handleTyping}
+                        disabled={messageLoading}
+                      />
+                      <button className="btn btn-primary" type="submit" disabled={messageLoading || !message.trim()}>
+                        {messageLoading ? "Sending..." : "Send"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+              {!selectedContact && (
+                <div className="text-muted">Select a contact to start chatting.</div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

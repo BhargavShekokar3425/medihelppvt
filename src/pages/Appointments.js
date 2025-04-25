@@ -110,7 +110,7 @@ const Appointments = () => {
           {!loading && userAppointments.length === 0 && !error && (
             <div className="card mb-4">
               <div className="card-body text-center">
-                <p className="mb-3">You don't have any appointments yet.</p>
+                <p className="mb-3">You don&apost have any appointments yet.</p>
                 <p>Use the scheduler below to book your first appointment.</p>
               </div>
             </div>

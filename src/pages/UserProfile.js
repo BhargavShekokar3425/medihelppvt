@@ -6,7 +6,6 @@ const UserProfile = () => {
   const { currentUser, logout } = useBackendContext();
   const [profileData, setProfileData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('profile');
   const navigate = useNavigate();
 
@@ -47,17 +46,6 @@ const UserProfile = () => {
           <span className="visually-hidden">Loading...</span>
         </div>
         <p className="mt-2">Loading profile...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mt-5">
-        <div className="alert alert-danger">
-          <h4>Error</h4>
-          <p>{error}</p>
-        </div>
       </div>
     );
   }

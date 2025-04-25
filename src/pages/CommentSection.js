@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 
 const CommentSection = ({ comments, onAddComment }) => {
   const [newComment, setNewComment] = useState('');
@@ -77,5 +78,8 @@ const CommentSection = ({ comments, onAddComment }) => {
     </div>
   );
 };
-
+CommentSection.propTypes = {
+  comments: PropTypes.array.isRequired,
+  onAddComment: PropTypes.func.isRequired,
+};
 export default CommentSection;

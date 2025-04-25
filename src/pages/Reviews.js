@@ -83,50 +83,10 @@ const Reviews = () => {
     }
   };
 
-  // Debug function to test the review API directly
-  const debugReviewApi = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log("Testing direct API call with:", {
-        reviewType: reviewType,
-        doctorId: selectedDoctor?.id,
-        rating: newReview.rating,
-        title: newReview.title,
-        content: newReview.content
-      });
-      
-      const { apiService } = useBackendContext();
-      
-      // Attempt direct API call
-      const response = await apiService.post('/reviews', {
-        reviewType: reviewType,
-        doctorId: selectedDoctor?.id,
-        rating: newReview.rating,
-        title: newReview.title,
-        content: newReview.content
-      });
-      
-      console.log("Direct API call succeeded:", response);
-      setNewReview({ rating: 5, title: "", content: "" });
-      setShowReviewForm(false);
-      
-      // Update the reviews list
-      const updatedReviews = await reviewService.getAllReviews(1, 10);
-      setReviews(updatedReviews);
-    } catch (error) {
-      console.error("Debug API error:", error);
-      setError(`API Debug Error: ${error.message || "Unknown error"}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Handle new review submission
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (reviewType === 'doctor' && !selectedDoctor) {
       setError("Please select a doctor to review.");
       return;
@@ -135,23 +95,34 @@ const Reviews = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      console.log("Submitting review:", {
-        type: reviewType,
-        doctorId: selectedDoctor?.id,
-        review: newReview
-      });
-      
+
+      // Prepare review object with all required attributes
+      const reviewPayload = {
+        ...newReview,
+        reviewType,
+        createdAt: new Date().toISOString(),
+        author: {
+          id: currentUser?.id || currentUser?._id || "",
+          name: currentUser?.name || "",
+          avatar: currentUser?.avatar || ""
+        }
+      };
       if (reviewType === 'doctor') {
-        await reviewService.addDoctorReview(selectedDoctor.id, newReview);
+        reviewPayload.doctor = {
+          id: selectedDoctor.id,
+          name: selectedDoctor.name,
+          specialization: selectedDoctor.specialization,
+          avatar: selectedDoctor.avatar || ""
+        };
+        await reviewService.addDoctorReview(selectedDoctor.id, reviewPayload);
       } else {
-        await reviewService.addAppReview(newReview);
+        await reviewService.addAppReview(reviewPayload);
       }
-      
+
       // Update the reviews list
       const updatedReviews = await reviewService.getAllReviews(1, 10);
       setReviews(updatedReviews);
-      
+
       // Reset form
       setNewReview({ rating: 5, title: "", content: "" });
       setSelectedDoctor(null);
@@ -159,11 +130,6 @@ const Reviews = () => {
     } catch (err) {
       console.error("Review submission error:", err);
       setError(`Failed to submit review: ${err.message || "Please try again."}`);
-      
-      // If regular submission fails, try the debug method
-      if (window.confirm("Review submission failed. Would you like to try debug mode?")) {
-        debugReviewApi();
-      }
     } finally {
       setLoading(false);
     }

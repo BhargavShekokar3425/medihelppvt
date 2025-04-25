@@ -8,8 +8,8 @@ function PrescriptionMain(){
           
        <div className="jumbotron gradient-background p-4 p-md-5 text-white rounded bg-dark" style={{marginBottom: "32px"}} >
         <div className="col-md-6 px-0 " style={{color: "black"}}>
-          <h1 className="display-4 font-italic" >Prescription Portal</h1>
-          <p className="lead my-3">We'd love to hear about your experience! Your feedback helps us enhance our services and create a better experience for you and others. Share your thoughts with us!</p>
+          <h1 className="display-4 font-italic" >Prescription Hub&apos;s Dashboard</h1>
+          <p className="lead my-3">We&apos;d love to hear about your experience! Your feedback helps us enhance our services and create a better experience for you and others. Share your thoughts with us!</p>
           <p className="lead my-3">Your go-to Prescription Portal—fast, easy, and hassle-free! Doctors prescribe, patients order, and medications arrive at your doorstep.</p>
           <p className="lead mb-0" style={{fontWeight: "bolder"}}><a href="https://example.com" className="text-white font-weight-bold">Send Requests Below...</a></p>
         </div>
@@ -31,8 +31,7 @@ function PrescriptionMain(){
               <ul className="d-flex list-unstyled mt-auto"  >
                 
                 <li className="d-flex align-items-stretch me-3">
-                 
-                    <Link to="/pres-doctor" className="view-more">  
+                  <Link to="/pres-doctor" className="view-more">  
                           View More  
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-arrow-right" viewBox="0 0 16 16">
                             <path fillRule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8"/>

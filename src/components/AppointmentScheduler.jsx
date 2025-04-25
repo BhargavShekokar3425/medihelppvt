@@ -1049,7 +1049,6 @@ export default function AppointmentScheduler() {
 
   // New function to handle appointment cancellation
   const handleCancelAppointment = async (key) => {
-    const [dateStr, timeSlot] = key.split('-');
     const appointments = getAppointments();
     const appointment = appointments[key];
     
@@ -1199,11 +1198,10 @@ export default function AppointmentScheduler() {
                 </thead>
                 <tbody>
                   {Object.entries(getAppointments()).map(([key, appointment]) => {
-                    const [dateStr, timeSlot] = key.split('-');
                     return (
                       <tr key={key}>
-                        <td>{formatDateFromKey(dateStr)}</td>
-                        <td>{timeSlot}</td>
+                        <td>{formatDateFromKey(key.split('-')[0])}</td>
+                        <td>{key.split('-')[1]}</td>
                         <td>{appointment.doctorName || selectedStaff?.name || 'Unknown'}</td>
                         <td>{appointment.text}</td>
                         <td>
@@ -1227,7 +1225,7 @@ export default function AppointmentScheduler() {
             </div>
           ) : (
             <div className="alert alert-info">
-              You don't have any upcoming appointments. Book one below.
+              You don&apost have any upcoming appointments. Book one below.
             </div>
           )}
         </div>

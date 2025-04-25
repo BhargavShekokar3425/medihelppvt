@@ -1,5 +1,6 @@
 import React, { createContext, useContext } from 'react';
 import { useBackendState } from '../hooks/useBackendState';
+import PropTypes from 'prop-types';
 
 // Create Context
 const BackendContext = createContext(null);
@@ -13,6 +14,10 @@ export const BackendProvider = ({ children }) => {
       {children}
     </BackendContext.Provider>
   );
+};
+
+BackendProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 };
 
 // Custom Hook for using the context
