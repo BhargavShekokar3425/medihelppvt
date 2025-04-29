@@ -1,0 +1,172 @@
+/*
+  Global Theme CSS - Adds cohesive styling across the application
+  based on the .font-italic.text-black "About" heading style
+*/
+
+/* Typography Enhancements */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Playfair Display", Georgia, "Times New Roman", serif !important;
+  margin-bottom: 0.8rem;
+}
+
+h4.font-italic {
+  position: relative;
+  padding-bottom: 10px;
+}
+
+h4.font-italic:after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 50px;
+  height: 2px;
+  background: linear-gradient(90deg, #5aa3e7, #d73434);
+}
+
+/* Card Enhancements */
+.card {
+  border-radius: 8px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+}
+
+.card-header {
+  border-bottom: none;
+  background-color: #ffffff !important;
+  padding-bottom: 0 !important;
+}
+
+/* Button Style Consistency */
+.btn {
+  border-radius: 6px !important;
+  padding: 8px 16px !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, #5aa3e7, #4285F4) !important;
+  border: none !important;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background: linear-gradient(90deg, #4285F4, #3367d6) !important;
+  box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3) !important;
+}
+
+.btn-danger {
+  background: linear-gradient(90deg, #d73434, #c62828) !important;
+  border: none !important;
+}
+
+/* Section backgrounds */
+.gradient-background {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 240, 240, 0.95) 100%) !important;
+  border-radius: 12px !important;
+}
+
+/* Alert styling */
+.alert {
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* About section enhancement */
+.bg-light.rounded {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 240, 240, 0.95) 100%) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 1.5rem !important;
+}
+
+/* Modern form styling */
+.form-control {
+  border-radius: 6px !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  padding: 10px 15px !important;
+  transition: all 0.3s ease !important;
+}
+
+.form-control:focus {
+  box-shadow: 0 0 0 3px rgba(90, 163, 231, 0.25) !important;
+  border-color: #5aa3e7 !important;
+}
+
+/* Navigation enhancement */
+.nav-scroller .nav-link {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.nav-scroller .nav-link:after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #5aa3e7, #d73434);
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.nav-scroller .nav-link:hover:after {
+  width: 80%;
+}
+
+/* Table styling */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+table th {
+  background-color: #f8f9fa !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Emergency contacts styling */
+.contact-card {
+  border-radius: 8px !important;
+  background-color: #ffffff !important;
+  padding: 15px !important;
+  margin-bottom: 12px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  transition: transform 0.3s ease !important;
+}
+
+.contact-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Consistent spacing */
+.container, .container-fluid {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+/* Animations for page transitions */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

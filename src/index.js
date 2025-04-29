@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
+import './styles/global-theme.css'; // Import our new global theme
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 

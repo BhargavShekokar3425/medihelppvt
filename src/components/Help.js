@@ -1,4 +1,5 @@
 import React from "react";
+import About from "./About";
 
 const Help = () => {
   return (
@@ -84,14 +85,11 @@ const Help = () => {
        {/* <!-- /.blog-main --> */}
    
        <aside className="col-md-4 blog-sidebar">
-         <div className="p-4 mb-3 bg-light rounded gradient-bg">
-           <h4 className="font-italic text-black">About</h4>
-           <p className="mb-0">MediHelp is your all-in-one medical companion, making healthcare access seamless and convenient.  
+         <About 
+           content="MediHelp is your all-in-one medical companion, making healthcare access seamless and convenient. 
              Schedule doctor appointments, request prescriptions, and manage your health effortlessly with Google Calendar integration.  
-             In emergencies, send out SOS requests instantly. Stay connected with the right medical help—anytime, anywhere.</p>
-         </div>
-   
-   
+             In emergencies, send out SOS requests instantly. Stay connected with the right medical help—anytime, anywhere."
+         />
        </aside>
        {/* <!-- /.blog-sidebar --> */}
    
