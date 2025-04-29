@@ -4,28 +4,28 @@ import { Navigate } from 'react-router-dom';
 import { useBackendContext } from '../contexts/BackendContext';
 
 /**
- * Ultra minimal wrapper for routes that require authentication
- * Designed to prevent any DOM manipulation issues
+ * Minimal wrapper for routes that require authentication
+ * Designed to avoid DOM manipulation issues
  */
 const AuthWrapper = ({ children, requiredRole = null }) => {
   const { currentUser, loading } = useBackendContext();
   
-  // Simple static loading indicator with no transitions or animations
   if (loading) {
-    return <div>Loading...</div>;
+    // Use the most basic loading indicator possible
+    return <p>Loading...</p>;
   }
   
-  // Simple redirect for unauthenticated users
   if (!currentUser) {
+    // Simple redirection without state
     return <Navigate to="/login" replace />;
   }
   
-  // Simple redirect for unauthorized roles
   if (requiredRole && currentUser.role !== requiredRole) {
     return <Navigate to="/" replace />;
   }
   
-  // Return children directly - no fragments, no wrappers
+  // Return children directly without any wrapper
+  // This avoids additional DOM nodes that might cause issues
   return children;
 };
 

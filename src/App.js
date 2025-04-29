@@ -20,6 +20,7 @@ import Footer from "./components/Footer";
 
 import './App.css';
 import { BackendProvider } from './contexts/BackendContext';
+import SOS from './pages/SOS';
 
 function App() { 
   return (
@@ -37,7 +38,7 @@ function App() {
           {/* Protected routes */}
           <Route path="/sos" element={
             <AuthWrapper>
-              <h1>SOS Page</h1>
+              <SOS />
             </AuthWrapper>
           } />
           <Route path="/appointments" element={

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import smsService from './smsService';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -133,6 +134,133 @@ const apiService = {
   getUserRole: () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     return user?.role;
+  },
+
+  // Add these methods for SOS functionality
+  sendSosAlert: async (userId, latitude, longitude, hospitalId = null) => {
+    try {
+      const response = await axiosInstance.post('/api/emergency/sos', {
+        userId,
+        location: { latitude, longitude, accuracy: 10 },
+        hospitalId,
+        emergencyType: 'medical',
+        description: 'Medical emergency requiring immediate assistance'
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error sending SOS:', error);
+      throw error;
+    }
+  },
+  
+  // Get SOS status
+  getSosStatus: async (sosId) => {
+    try {
+      const response = await axiosInstance.get(`/api/emergency/${sosId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting SOS status:', error);
+      throw error;
+    }
+  },
+  
+  // Update SOS status
+  updateSosStatus: async (sosId, status) => {
+    try {
+      const response = await axiosInstance.put(`/api/emergency/${sosId}/status`, { status });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating SOS status:', error);
+      throw error;
+    }
+  },
+  
+  // Get nearby hospitals
+  getNearbyHospitals: async (latitude, longitude, radius = 10) => {
+    try {
+      const response = await axiosInstance.get('/api/emergency/hospitals', {
+        params: { latitude, longitude, radius }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching nearby hospitals:', error);
+      throw error;
+    }
+  },
+
+  // Add SMS sending capability to the API service
+  async sendSMS(phoneNumber, message) {
+    try {
+      // First try to use the backend API
+      const response = await this.post('/notifications/sms', {
+        to: phoneNumber,
+        message
+      });
+      return response;
+    } catch (error) {
+      // If backend API fails, try using our SMS service directly
+      console.warn('Backend SMS API failed, using SMS service directly:', error);
+      return smsService.sendSMS(phoneNumber, message);
+    }
+  },
+
+  // Send bulk SMS messages
+  async sendBulkSMS(phoneNumbers, message) {
+    try {
+      // First try to use the backend API
+      const response = await this.post('/notifications/sms/bulk', {
+        to: phoneNumbers,
+        message
+      });
+      return response;
+    } catch (error) {
+      // If backend API fails, try using our SMS service directly
+      console.warn('Backend bulk SMS API failed, using SMS service directly:', error);
+      return smsService.sendBulkSMS(phoneNumbers, message);
+    }
+  },
+
+  // Send SOS with enhanced backup systems
+  async sendSos(userId, latitude, longitude, hospitalId) {
+    try {
+      const response = await this.post('/emergency/sos', {
+        userId,
+        latitude,
+        longitude,
+        hospitalId,
+        timestamp: new Date().toISOString()
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('Error sending SOS through API:', error);
+      
+      // Create a fallback SOS data structure
+      const sosData = {
+        success: false,
+        id: `local-sos-${Date.now()}`,
+        message: 'SOS created locally due to server error',
+        timestamp: new Date().toISOString(),
+        status: 'created'
+      };
+      
+      // Store in local storage as a backup
+      try {
+        const existingSOS = JSON.parse(localStorage.getItem('emergency_sos') || '[]');
+        existingSOS.push({
+          userId,
+          latitude,
+          longitude,
+          hospitalId,
+          ...sosData
+        });
+        localStorage.setItem('emergency_sos', JSON.stringify(existingSOS));
+      } catch (storageError) {
+        console.error('Failed to store emergency data locally:', storageError);
+      }
+      
+      throw error;
+    }
   }
 };
 

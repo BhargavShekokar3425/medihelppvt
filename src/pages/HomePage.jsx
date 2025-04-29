@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useBackendContext } from '../contexts/BackendContext';
+import About from '../components/About';
 
 const HomePage = () => {
   const { currentUser } = useBackendContext();
   
   return (
-    <div className="home-page py-4">
+    <div className="home-page py-4 animate-fade-in">
       <div className="jumbotron gradient-background p-4 p-md-5 text-white rounded bg-dark mb-4">
         <div className="row align-items-center">
           <div className="col-md-8 px-0" style={{ color: "black" }}>
@@ -80,6 +81,22 @@ const HomePage = () => {
               <Link to="/docanswers" className="btn btn-sm btn-outline-primary">Start Chat</Link>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* About MediHelp section using the About component */}
+      <div className="row my-4">
+        <div className="col-md-8">
+          <h2>About MediHelp</h2>
+          <p>
+            MediHelp is your all-in-one medical companion, making healthcare access seamless and convenient. Schedule appointments, get emergency help, and manage prescriptions all in one place.
+          </p>
+        </div>
+        <div className="col-md-4">
+          <About
+            title="About MediHelp"
+            content="MediHelp is your all-in-one medical companion, making healthcare access seamless and convenient. Schedule appointments, get emergency help, and manage prescriptions all in one place."
+          />
         </div>
       </div>
     </div>

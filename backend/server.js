@@ -10,6 +10,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key'; // In produc
 // Import in-memory store
 const store = require('./data/store');
 
+// Import emergency controller
+const emergencyController = require('./controllers/emergency.controller');
+
+// Import the notification service
+const notificationService = require('./services/notificationService');
+
+// Import notification routes
+const notificationRoutes = require('./routes/notification.routes');
+
 // Enhanced CORS configuration to specify frontend origin
 const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:5001',
@@ -595,176 +604,169 @@ app.get('/api/appointments/booked-slots/:doctorId', authenticateToken, (req, res
   res.json(formattedSlots);
 });
 
-// REVIEW ROUTES
-// Get all public reviews with pagination
-app.get('/api/reviews', (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-  
+// EMERGENCY ROUTES
+// Create emergency request (SOS)
+app.post('/api/emergency/sos', authenticateToken, async (req, res) => {
   try {
-    const publicReviews = store.getPublicReviews(parseInt(page), parseInt(limit));
-    res.json(publicReviews);
-  } catch (error) {
-    console.error('Error fetching reviews:', error);
-    res.status(500).json({ message: 'Failed to fetch reviews' });
-  }
-});
-
-// Get reviews for a specific doctor
-app.get('/api/reviews/doctor/:doctorId', (req, res) => {
-  const { doctorId } = req.params;
-  
-  try {
-    const doctorReviews = store.getDoctorReviews(doctorId);
-    res.json(doctorReviews);
-  } catch (error) {
-    console.error(`Error fetching reviews for doctor ${doctorId}:`, error);
-    res.status(500).json({ message: 'Failed to fetch doctor reviews' });
-  }
-});
-
-// Get reviews for the app
-app.get('/api/reviews/app', (req, res) => {
-  try {
-    const appReviews = store.getAppReviews();
-    res.json(appReviews);
-  } catch (error) {
-    console.error('Error fetching app reviews:', error);
-    res.status(500).json({ message: 'Failed to fetch app reviews' });
-  }
-});
-
-// Add a new review
-app.post('/api/reviews', authenticateToken, (req, res) => {
-  const { doctorId, rating, title, content, reviewType = 'doctor' } = req.body;
-  
-  // Validate required fields
-  if (!rating || !title || !content) {
-    return res.status(400).json({ message: 'Rating, title and content are required' });
-  }
-  
-  try {
-    // Get author data
-    const author = store.findUserById(req.user.id);
+    const { userId, latitude, longitude, hospitalId } = req.body;
     
-    if (!author) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-    
-    let doctor = null;
-    let newReview;
-    
-    // Create the review object based on review type
-    if (reviewType === 'doctor' && doctorId) {
-      // Find the doctor
-      doctor = store.findUserById(doctorId);
-      
-      if (!doctor || doctor.role !== 'doctor') {
-        return res.status(404).json({ message: 'Doctor not found' });
-      }
-      
-      newReview = store.createReview({
-        reviewType: 'doctor',
-        doctorId,
-        doctor: {
-          id: doctor.id,
-          name: doctor.name,
-          specialization: doctor.specialization || 'General Practice',
-          avatar: doctor.avatar
-        },
-        authorId: author.id,
-        author: {
-          id: author.id,
-          name: author.name,
-          avatar: author.avatar
-        },
-        rating: parseInt(rating),
-        title,
-        content,
-        isPublic: true
-      });
-    } else {
-      // General app review
-      newReview = store.createReview({
-        reviewType: 'app',
-        authorId: author.id,
-        author: {
-          id: author.id,
-          name: author.name,
-          avatar: author.avatar
-        },
-        rating: parseInt(rating),
-        title,
-        content,
-        isPublic: true
+    if (!userId || !latitude || !longitude) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'User ID and location are required'
       });
     }
     
-    console.log(`New ${newReview.reviewType} review added by user ${author.id}`);
-    res.status(201).json(newReview);
-  } catch (error) {
-    console.error('Error adding review:', error);
-    res.status(500).json({ message: 'Failed to add review' });
-  }
-});
-
-// Update a review (only the author can update)
-app.put('/api/reviews/:id', authenticateToken, (req, res) => {
-  const { id } = req.params;
-  const { rating, title, content } = req.body;
-  
-  try {
-    // Find the review
-    const existingReview = store.reviews.find(rev => rev.id === id);
-    if (!existingReview) {
-      return res.status(404).json({ message: 'Review not found' });
+    // Create the emergency request
+    const emergencyId = `sos_${Date.now()}_${userId}`;
+    const emergencyData = {
+      id: emergencyId,
+      userId,
+      location: { latitude, longitude },
+      hospitalId,
+      status: 'created',
+      createdAt: new Date().toISOString()
+    };
+    
+    // Save to store
+    const savedEmergency = store.createEmergencyRequest(emergencyData);
+    
+    // Get hospital information
+    const hospital = hospitalId ? store.getHospitalById(hospitalId) : null;
+    
+    // Get user information
+    const user = store.getUserById(userId);
+    
+    // Send notifications
+    let notificationResult = { success: false, attempted: false };
+    
+    if (hospital) {
+      notificationResult = await notificationService.sendEmergencyNotification({
+        user,
+        location: { latitude, longitude },
+        hospital,
+        message: 'Emergency medical assistance needed'
+      });
     }
     
-    // Check if the user is the author
-    if (existingReview.authorId !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to update this review' });
-    }
-    
-    // Update the review
-    const updatedReview = store.updateReview(id, {
-      rating: rating !== undefined ? parseInt(rating) : existingReview.rating,
-      title: title || existingReview.title,
-      content: content || existingReview.content
+    res.json({
+      success: true,
+      id: emergencyId,
+      message: 'SOS alert created successfully',
+      notificationSent: notificationResult.success,
+      emergency: savedEmergency
     });
     
-    console.log(`Review ${id} updated by user ${req.user.id}`);
-    res.json(updatedReview);
   } catch (error) {
-    console.error('Error updating review:', error);
-    res.status(500).json({ message: 'Failed to update review' });
+    console.error('Error processing SOS request:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error when processing SOS',
+      error: error.message
+    });
   }
 });
 
-// Delete a review (only the author can delete)
-app.delete('/api/reviews/:id', authenticateToken, (req, res) => {
-  const { id } = req.params;
-  
-  try {
-    // Find the review
-    const review = store.reviews.find(rev => rev.id === id);
-    if (!review) {
-      return res.status(404).json({ message: 'Review not found' });
-    }
-    
-    // Check if the user is the author
-    if (review.authorId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to delete this review' });
-    }
-    
-    // Delete the review
-    const deletedReview = store.deleteReview(id);
-    
-    console.log(`Review ${id} deleted by user ${req.user.id}`);
-    res.json({ message: 'Review deleted successfully', review: deletedReview });
-  } catch (error) {
-    console.error('Error deleting review:', error);
-    res.status(500).json({ message: 'Failed to delete review' });
-  }
+// Get emergency request details
+app.get('/api/emergency/:id', authenticateToken, (req, res) => {
+  emergencyController.getEmergencyRequest(req, res);
 });
+
+// Update emergency request status
+app.put('/api/emergency/:id/status', authenticateToken, (req, res) => {
+  emergencyController.updateEmergencyRequestStatus(req, res);
+});
+
+// Get nearby hospitals
+app.get('/api/emergency/hospitals', (req, res) => {
+  emergencyController.getNearbyHospitals(req, res);
+});
+
+// Initialize hospitals data in the store if not exists
+if (!store.hospitals) {
+  store.hospitals = [
+    {
+      id: 'h1',
+      name: 'PHC (IIT Jodhpur)',
+      description: 'Primary Health Center at IIT Jodhpur campus',
+      address: 'IIT Jodhpur Campus, Karwar, Rajasthan 342037',
+      contact: '0291-123456',
+      email: 'phc@iitj.ac.in',
+      location: {
+        latitude: 26.4766,
+        longitude: 73.1140
+      },
+      type: 'primary',
+      services: ['emergency', 'general medicine', 'first aid'],
+      operatingHours: '24x7'
+    },
+    {
+      id: 'h2',
+      name: 'AIIMS Jodhpur',
+      description: 'All India Institute of Medical Sciences, Jodhpur',
+      address: 'Basni Industrial Area Phase-2, Jodhpur, Rajasthan 342005',
+      contact: '0291-2740741',
+      email: 'emergency@aiimsjodhapur.edu.in',
+      location: {
+        latitude: 26.2418,
+        longitude: 73.0137
+      },
+      type: 'tertiary',
+      services: ['emergency', 'trauma care', 'intensive care', 'surgery'],
+      operatingHours: '24x7'
+    },
+    {
+      id: 'h3',
+      name: 'MediPulse Hospital',
+      description: 'Multispecialty hospital in Jodhpur city',
+      address: '2nd E Rd, near Amrit Nagar, Medipulse Hospital Campus, Jodhpur, Rajasthan 342005',
+      contact: '0291-2795555',
+      email: 'emergency@medipulse.in',
+      location: {
+        latitude: 26.2802,
+        longitude: 73.0234
+      },
+      type: 'secondary',
+      services: ['emergency', 'cardiology', 'neurology', 'orthopedics'],
+      operatingHours: '24x7'
+    },
+    {
+      id: 'h4',
+      name: 'Goyal Hospital',
+      description: 'Goyal Hospital & Research Centre',
+      address: 'Residency Road, Sardarpura, Jodhpur, Rajasthan 342003',
+      contact: '0291-2434641',
+      email: 'emergency@goyalhospital.com',
+      location: {
+        latitude: 26.2724,
+        longitude: 73.0081
+      },
+      type: 'secondary',
+      services: ['emergency', 'pediatrics', 'gynecology', 'general medicine'],
+      operatingHours: '24x7'
+    },
+    {
+      id: 'h5',
+      name: 'Test Hospital (For Testing)',
+      description: 'Hospital with test contact details',
+      address: 'Test Address, Jodhpur, Rajasthan 342011',
+      contact: '9999999999',
+      email: 'b23cs1008@iitj.ac.in',
+      location: {
+        latitude: 26.3024,
+        longitude: 73.0381
+      },
+      type: 'primary',
+      services: ['emergency', 'testing'],
+      operatingHours: '24x7'
+    }
+  ];
+}
+
+// Initialize emergencyRequests array if not exists
+if (!store.emergencyRequests) {
+  store.emergencyRequests = [];
+}
 
 // Catch-all for unknown API routes
 app.all('/api/*', (req, res) => {
