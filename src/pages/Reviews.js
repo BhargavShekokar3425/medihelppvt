@@ -37,10 +37,11 @@ const Reviews = () => {
       }
     };
 
-    // Fetch available doctors for the review form
+    // Fetch available doctors from API
     const fetchDoctors = async () => {
       try {
-        const response = await fetchAvailableDoctors();
+        const { default: apiService } = await import('../services/apiService');
+        const response = await apiService.get('/users/doctors');
         setDoctors(response);
       } catch (err) {
         console.error("Failed to fetch doctors:", err);
@@ -50,16 +51,6 @@ const Reviews = () => {
     fetchReviews();
     fetchDoctors();
   }, []);
-
-  // Mock function to fetch doctors - replace with actual API call
-  const fetchAvailableDoctors = async () => {
-    // In a real app, this would come from an API
-    return [
-      { id: 'd1', name: 'Dr. Neha Sharma', specialization: 'Cardiologist' },
-      { id: 'd2', name: 'Dr. Shikha Chibber', specialization: 'Neurologist' },
-      { id: 'd3', name: 'Dr. Mohan Singh', specialization: 'Pediatrician' }
-    ];
-  };
 
   // Load more reviews when scrolling
   const loadMoreReviews = async () => {
@@ -108,13 +99,8 @@ const Reviews = () => {
         }
       };
       if (reviewType === 'doctor') {
-        reviewPayload.doctor = {
-          id: selectedDoctor.id,
-          name: selectedDoctor.name,
-          specialization: selectedDoctor.specialization,
-          avatar: selectedDoctor.avatar || ""
-        };
-        await reviewService.addDoctorReview(selectedDoctor.id, reviewPayload);
+        const doctorId = selectedDoctor.id || selectedDoctor._id;
+        await reviewService.addDoctorReview(doctorId, reviewPayload);
       } else {
         await reviewService.addAppReview(reviewPayload);
       }
@@ -241,16 +227,16 @@ const Reviews = () => {
                       <label className="form-label">Select Doctor</label>
                       <select 
                         className="form-select"
-                        value={selectedDoctor?.id || ''}
+                        value={selectedDoctor?.id || selectedDoctor?._id || ''}
                         onChange={(e) => {
-                          const doctor = doctors.find(d => d.id === e.target.value);
+                          const doctor = doctors.find(d => (d.id || d._id) === e.target.value);
                           setSelectedDoctor(doctor);
                         }}
                         required={reviewType === 'doctor'}
                       >
                         <option value="">Choose a doctor...</option>
                         {doctors.map(doctor => (
-                          <option key={doctor.id} value={doctor.id}>
+                          <option key={doctor.id || doctor._id} value={doctor.id || doctor._id}>
                             {doctor.name} - {doctor.specialization}
                           </option>
                         ))}
@@ -346,7 +332,7 @@ const Reviews = () => {
           ) : (
             <div className="reviews-list">
               {reviews.map((review) => (
-                <div key={review.id} className="card mb-4 shadow-sm">
+                <div key={review.id || review._id} className="card mb-4 shadow-sm">
                   <div className="card-header d-flex justify-content-between align-items-center">
                     <div>
                       <h5 className="mb-0">{review.title}</h5>
@@ -376,7 +362,7 @@ const Reviews = () => {
                         <div>
                           <p className="mb-0">
                             <strong>Doctor: </strong>
-                            <Link to={`/doctors/${review.doctor?.id}`} className="text-decoration-none">
+                            <Link to={`/doctors/${review.doctor?.id || review.doctor?._id}`} className="text-decoration-none">
                               {review.doctor?.name}
                             </Link>
                           </p>
@@ -435,8 +421,8 @@ const Reviews = () => {
             <div className="list-group list-group-flush">
               {doctors.slice(0, 5).map((doctor) => (
                 <Link 
-                  key={doctor.id} 
-                  to={`/doctors/${doctor.id}`} 
+                  key={doctor.id || doctor._id} 
+                  to={`/doctors/${doctor.id || doctor._id}`} 
                   className="list-group-item list-group-item-action d-flex align-items-center"
                 >
                   <img 

@@ -139,14 +139,14 @@ const apiService = {
   // Add these methods for SOS functionality
   sendSosAlert: async (userId, latitude, longitude, hospitalId = null) => {
     try {
-      const response = await axiosInstance.post('/api/emergency/sos', {
+      const response = await axiosInstance.post('/emergency/sos', {
         userId,
         location: { latitude, longitude, accuracy: 10 },
         hospitalId,
         emergencyType: 'medical',
         description: 'Medical emergency requiring immediate assistance'
       });
-      return response.data;
+      return response;
     } catch (error) {
       console.error('Error sending SOS:', error);
       throw error;
@@ -156,8 +156,8 @@ const apiService = {
   // Get SOS status
   getSosStatus: async (sosId) => {
     try {
-      const response = await axiosInstance.get(`/api/emergency/${sosId}`);
-      return response.data;
+      const response = await axiosInstance.get(`/emergency/${sosId}`);
+      return response;
     } catch (error) {
       console.error('Error getting SOS status:', error);
       throw error;
@@ -167,8 +167,8 @@ const apiService = {
   // Update SOS status
   updateSosStatus: async (sosId, status) => {
     try {
-      const response = await axiosInstance.put(`/api/emergency/${sosId}/status`, { status });
-      return response.data;
+      const response = await axiosInstance.put(`/emergency/${sosId}/status`, { status });
+      return response;
     } catch (error) {
       console.error('Error updating SOS status:', error);
       throw error;
@@ -178,10 +178,10 @@ const apiService = {
   // Get nearby hospitals
   getNearbyHospitals: async (latitude, longitude, radius = 10) => {
     try {
-      const response = await axiosInstance.get('/api/emergency/hospitals', {
+      const response = await axiosInstance.get('/emergency/hospitals', {
         params: { latitude, longitude, radius }
       });
-      return response.data;
+      return response;
     } catch (error) {
       console.error('Error fetching nearby hospitals:', error);
       throw error;

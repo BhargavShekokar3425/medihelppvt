@@ -16,17 +16,19 @@ const Doctors = () => {
         // Try to load doctors from API
         let doctorsList = [];
         if (apiService) {
-          doctorsList = await apiService.get('/users/doctors');
-        } else {
-          // Fallback to hardcoded doctors if API fails
-          doctorsList = [
-            { id: 'd1', name: 'Dr. Neha Sharma', specialization: 'Cardiology', experience: '10 years', avatar: '/assets/femme.jpeg' },
-            { id: 'd2', name: 'Dr. Shikha Chibber', specialization: 'Neurology', experience: '8 years', avatar: '/assets/fem.jpeg' },
-            { id: 'd3', name: 'Dr. Ayurvedic Specialists', specialization: 'Ayurveda', experience: '15 years', avatar: '/assets/doctorman.avif' },
-            { id: 'd4', name: 'Dr. Vibha Dubey', specialization: 'Dermatology', experience: '12 years', avatar: '/assets/femmedocie.jpg' },
-            { id: 'd5', name: 'Dr. Shweta Singh', specialization: 'Pediatrics', experience: '7 years', avatar: '/assets/cutu.jpeg' },
-            { id: 'd6', name: 'Dr. Misha Goyal', specialization: 'Gynecology', experience: '9 years', avatar: '/assets/vcutu.jpg' }
-          ];
+          const raw = await apiService.get('/users/doctors');
+          // Map backend fields to display fields
+          doctorsList = (raw || []).map(d => ({
+            id: d.id || d._id,
+            name: d.name,
+            specialization: d.specialization || 'General',
+            experience: typeof d.experience === 'number' ? `${d.experience} years` : (d.experience || 'N/A'),
+            avatar: d.profileImage || '/assets/doctorman.avif'
+          }));
+        }
+        
+        if (!doctorsList.length) {
+          setError("No doctors found. Please check back later.");
         }
         
         setDoctors(doctorsList);
@@ -65,14 +67,15 @@ const Doctors = () => {
       ) : (
         <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
           {doctors.map((doctor) => (
-            <div className="col" key={doctor.id}>
+            <div className="col" key={doctor.id || doctor._id}>
               <div className="card h-100 shadow-sm doctor-card">
                 <div className="card-img-wrapper">
                   <img 
-                    src={doctor.avatar || '/assets/default-avatar.png'} 
+                    src={doctor.avatar || '/assets/doctorman.avif'} 
                     className="card-img-top" 
                     alt={doctor.name} 
                     style={{ height: '240px', objectFit: 'cover' }}
+                    onError={(e) => { e.target.src = '/assets/doctorman.avif'; }}
                   />
                   <div className="doctor-overlay">
                     <Link 

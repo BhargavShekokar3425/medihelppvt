@@ -1,43 +1,20 @@
 const mongoose = require('mongoose');
 
-const messageSchema = new mongoose.Schema({
-  conversation: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Conversation',
-    required: true
+const messageSchema = new mongoose.Schema(
+  {
+    conversation: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation', required: true },
+    sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    body: { type: String, required: true }, // Use "body" to match frontend expectations
+    readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
-  sender: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  text: {
-    type: String,
-    trim: true
-  },
-  attachments: [{
-    type: String,
-    url: String,
-    filename: String,
-    mimetype: String,
-    size: Number
-  }],
-  readBy: [{
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    readAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  isDeleted: {
-    type: Boolean,
-    default: false
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
-}, {
-  timestamps: true
-});
+);
+
+// Index for quick retrieval of messages in a conversation
+messageSchema.index({ conversation: 1, createdAt: 1 });
 
 module.exports = mongoose.model('Message', messageSchema);

@@ -17,7 +17,7 @@ const AuthWrapper = ({ children, requiredRole = null }) => {
   
   // Simple redirect for unauthenticated users
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/signup" replace />;
   }
   
   // Simple redirect for unauthorized roles

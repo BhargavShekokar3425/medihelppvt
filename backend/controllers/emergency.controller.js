@@ -1,28 +1,39 @@
 const nodemailer = require('nodemailer');
 const store = require('../data/store');
 
-// Configure nodemailer
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-  port: process.env.EMAIL_PORT || 587,
-  secure: process.env.EMAIL_SECURE === 'true',
-  auth: {
-    user: process.env.EMAIL_USER || 'medihelp.test@ethereal.email',
-    pass: process.env.EMAIL_PASS || 'testpassword123'
-  },
-  tls: {
-    rejectUnauthorized: false // For development only
-  }
-});
+// Configure nodemailer - use mock if no credentials set
+let transporter;
+if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT || 587,
+    secure: process.env.EMAIL_SECURE === 'true',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
 
-// Test transporter connection
-transporter.verify((error) => {
-  if (error) {
-    console.error('Error verifying email transport:', error);
-  } else {
-    console.log('Email server is ready to send messages');
-  }
-});
+  // Test transporter connection
+  transporter.verify((error) => {
+    if (error) {
+      console.error('Error verifying email transport:', error.message);
+    } else {
+      console.log('Email server is ready to send messages');
+    }
+  });
+} else {
+  console.log('No email credentials configured - emergency emails will be simulated');
+  transporter = {
+    sendMail: async (mailOptions) => {
+      console.log(`[EMAIL SIMULATION] To: ${mailOptions.to}, Subject: ${mailOptions.subject}`);
+      return { messageId: `mock_${Date.now()}`, response: 'Simulated' };
+    }
+  };
+}
 
 // Simple SMS messaging service simulation
 const smsService = {

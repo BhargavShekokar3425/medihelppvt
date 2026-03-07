@@ -1,31 +1,19 @@
 const mongoose = require('mongoose');
 
-const conversationSchema = new mongoose.Schema({
-  participants: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  }],
-  type: {
-    type: String,
-    enum: ['individual', 'group'],
-    default: 'individual'
+const conversationSchema = new mongoose.Schema(
+  {
+    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
+    lastMessage: { type: mongoose.Schema.Types.ObjectId, ref: 'Message' },
+    lastMessageAt: { type: Date, default: Date.now },
   },
-  name: String, // For group chats
-  lastMessage: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Message'
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  isActive: {
-    type: Boolean,
-    default: true
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
-}, {
-  timestamps: true
-});
+);
+
+// Index for quick lookup of conversations by participant
+conversationSchema.index({ participants: 1 });
 
 module.exports = mongoose.model('Conversation', conversationSchema);

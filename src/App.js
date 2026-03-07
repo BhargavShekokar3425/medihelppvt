@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import UserProfile from "./pages/UserProfile";
 import Appointments from './pages/Appointments';
 import AppointmentScheduler from "./components/AppointmentScheduler";
+import DoctorDashboard from "./components/DoctorDashboard";
 import Reviews from "./pages/Reviews";
 import PrescriptionMain from "./pages/Prescription_Hub";
 import PrescDoc from "./pages/PresDoctors";
@@ -49,6 +50,11 @@ function App() {
           <Route path="/scheduler" element={
             <AuthWrapper>
               <AppointmentScheduler />
+            </AuthWrapper>
+          } />
+          <Route path="/doctor-dashboard" element={
+            <AuthWrapper requiredRole="doctor">
+              <DoctorDashboard />
             </AuthWrapper>
           } />
           <Route path="/docanswers" element={

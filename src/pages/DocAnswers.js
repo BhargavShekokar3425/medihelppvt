@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useBackendContext } from "../contexts/BackendContext";
 import { chatApi } from "../services/chatApi";
 
 const DocAnswers = () => {
+  const { currentUser, isLoggedIn } = useBackendContext();
+  
   // State variables
   const [contacts, setContacts] = useState({ patient: [], doctor: [], pharmacy: [] });
   const [selectedContact, setSelectedContact] = useState(null);
   const [message, setMessage] = useState("");
   const [conversations, setConversations] = useState({});
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [messageLoading, setMessageLoading] = useState(false);
@@ -16,41 +17,8 @@ const DocAnswers = () => {
   const socketRef = useRef(null);
   const messageEndRef = useRef(null);
   
-  // Load user data
-  const loadUserData = async () => {
-    try {
-      const userData = await chatApi.getCurrentUser();
-      setCurrentUser(userData);
-      setIsLoggedIn(true);
-      
-      // Connect websocket
-      connectToSocket();
-      
-      // Load conversations and contacts
-      await Promise.all([
-        loadConversations(),
-        loadContacts(userData.type)
-      ]);
-    } catch (error) {
-      console.error('Error loading user data:', error);
-      localStorage.removeItem('token');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Check if user is already logged in
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      loadUserData();
-    } else {
-      setLoading(false);
-    }
-  }, [loadUserData]);  // Add loadUserData as a dependency
-  
   // Connect to WebSocket
-  const connectToSocket = () => {
+  const connectToSocket = useCallback(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
     
@@ -176,10 +144,10 @@ const DocAnswers = () => {
         socket.off('user:offline');
       }
     };
-  };
+  }, []);
 
   // Load conversations
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       const conversationsData = await chatApi.getConversations();
       
@@ -194,30 +162,64 @@ const DocAnswers = () => {
       console.error('Error loading conversations:', error);
       setError('Failed to load conversations');
     }
-  };
+  }, []);
 
   // Load contacts
-  const loadContacts = async (userType) => {
+  const loadContacts = useCallback(async (userRole) => {
     try {
-      // Load different types of contacts based on user type
+      // Load different types of contacts based on user role
       const contactTypes = {
-        patient: ['doctor', 'pharmacy'],
-        doctor: ['patient', 'doctor', 'pharmacy'],
-        pharmacy: ['patient', 'doctor']
+        patient: ['doctor'],
+        doctor: ['patient', 'doctor'],
+        pharmacy: ['patient', 'doctor'],
       };
       
       const loadedContacts = { patient: [], doctor: [], pharmacy: [] };
-      for (const type of contactTypes[userType]) {
+      const types = contactTypes[userRole] || ['doctor'];
+      for (const type of types) {
         const users = await chatApi.getUsers(type);
         loadedContacts[type] = users;
       }
       
       setContacts(loadedContacts);
-    } catch (error) {
-      console.error('Error loading contacts:', error);
+    } catch (err) {
+      console.error('Error loading contacts:', err);
       setError('Failed to load contacts');
     }
-  };
+  }, []);
+
+  // Initialize when user logs in
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser) {
+      setLoading(false);
+      return;
+    }
+    
+    const init = async () => {
+      try {
+        setLoading(true);
+        connectToSocket();
+        await Promise.all([
+          loadConversations(),
+          loadContacts(currentUser.role || 'patient'),
+        ]);
+      } catch (err) {
+        console.error('Init error:', err);
+        setError('Failed to initialize chat');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    init();
+    
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [isLoggedIn, currentUser, connectToSocket, loadConversations, loadContacts]);
 
   // Handle sending messages
   const sendMessage = async (e) => {
@@ -283,17 +285,38 @@ const DocAnswers = () => {
   };
 
   // Handle selecting a contact and setting the current conversation
-  const handleSelectContact = (contact) => {
+  const handleSelectContact = async (contact) => {
     setSelectedContact(contact);
-    // Find or create a conversation with this contact
-    const conversationId = Object.keys(conversations).find(id => {
-      return conversations[id].some(
-        msg =>
-          (msg.sender === contact._id || msg.receiver === contact._id) &&
-          (msg.sender === currentUser._id || msg.receiver === currentUser._id)
+    setError(null);
+    
+    // Try to find an existing conversation for this contact
+    const contactId = contact._id || contact.id;
+    const existingConvId = Object.keys(conversations).find(id => {
+      const msgs = conversations[id];
+      return msgs.some(
+        (msg) =>
+          msg.sender === contactId ||
+          (msg.conversationId && conversations[id].participants?.includes(contactId))
       );
     });
-    setCurrentConversationId(conversationId || null);
+
+    if (existingConvId) {
+      setCurrentConversationId(existingConvId);
+      socketRef.current?.emit('conversation:join', existingConvId);
+      return;
+    }
+
+    // Create a new conversation via API
+    try {
+      const conv = await chatApi.getOrCreateConversation(contactId);
+      const convId = conv._id || conv.id;
+      setCurrentConversationId(convId);
+      setConversations((prev) => ({ ...prev, [convId]: [] }));
+      socketRef.current?.emit('conversation:join', convId);
+    } catch (err) {
+      console.error('Error creating conversation:', err);
+      setError('Could not start conversation');
+    }
   };
 
   // Return JSX for the component
@@ -304,11 +327,11 @@ const DocAnswers = () => {
           <div className="col-md-8 px-0" style={{ color: "black" }}>
             <h1 className="display-4 font-italic">DocAnswers Chat</h1>
             <p className="lead my-3">
-              Connect with healthcare professionals and pharmacies in real-time.
-              Get your medical questions answered and manage your prescriptions efficiently.
+              Connect with healthcare professionals in real-time.
+              Get your medical questions answered.
             </p>
             {isLoggedIn && currentUser && (
-              <div>User is logged in</div>
+              <p className="mb-0">Logged in as <strong>{currentUser.name}</strong></p>
             )}
           </div>
         </div>
@@ -323,7 +346,9 @@ const DocAnswers = () => {
         ) : error ? (
           <div className="alert alert-danger">{error}</div>
         ) : !isLoggedIn ? (
-          <div>Login form</div>
+          <div className="alert alert-info">
+            Please <a href="/login">log in</a> to use the chat feature.
+          </div>
         ) : (
           // Chat interface
           <div className="row">
@@ -352,13 +377,16 @@ const DocAnswers = () => {
                 <div>
                   <h5>Chat with {selectedContact.name}</h5>
                   <div style={{ height: "300px", overflowY: "auto", border: "1px solid #ccc", borderRadius: "8px", padding: "10px", marginBottom: "10px" }}>
-                    {(conversations[currentConversationId] || []).map(msg => (
-                      <div key={msg._id || msg.id} style={{ marginBottom: "8px", textAlign: msg.sender === currentUser._id ? "right" : "left" }}>
-                        <span className={`badge bg-${msg.sender === currentUser._id ? "primary" : "secondary"}`}>
-                          {msg.body || (msg.isTyping ? "Typing..." : "")}
-                        </span>
-                      </div>
-                    ))}
+                    {(conversations[currentConversationId] || []).map(msg => {
+                      const isMine = msg.sender === (currentUser._id || currentUser.id);
+                      return (
+                        <div key={msg._id || msg.id} style={{ marginBottom: "8px", textAlign: isMine ? "right" : "left" }}>
+                          <span className={`badge bg-${isMine ? "primary" : "secondary"}`} style={{ whiteSpace: 'normal', maxWidth: '70%', display: 'inline-block' }}>
+                            {msg.body || (msg.isTyping ? "Typing..." : "")}
+                          </span>
+                        </div>
+                      );
+                    })}
                     <div ref={messageEndRef}></div>
                   </div>
                   <form onSubmit={sendMessage}>

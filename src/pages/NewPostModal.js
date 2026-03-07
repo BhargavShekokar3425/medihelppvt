@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 
-const NewPostModal = ({ communityType, onClose, onSubmit }) => {
+const NewPostModal = ({ onClose, onSubmit }) => {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState([]);
-  const [role, setRole] = useState('');
 
   const handleSubmit = () => {
+    if (!title.trim() || !body.trim()) return;
     const newPost = {
       title,
       body,
-      tags,
-      author: `${role} (${role === 'Patient' ? 'Patient' : role})`,
-      communityType,
+      tags: tags.map(t => t.trim()).filter(Boolean),
       createdAt: new Date()
     };
     onSubmit(newPost);
@@ -85,23 +83,6 @@ const NewPostModal = ({ communityType, onClose, onSubmit }) => {
             fontSize: '16px'
           }}
         />
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          style={{
-            width: '100%',
-            marginBottom: '15px',
-            padding: '10px',
-            borderRadius: '4px',
-            border: '1px solid #ced4da',
-            fontSize: '16px'
-          }}
-        >
-          <option value="">Select Role</option>
-          <option value="Patient">Patient</option>
-          <option value="Doctor">Doctor</option>
-          <option value="Pharmacist">Pharmacist</option>
-        </select>
         <button
           onClick={handleSubmit}
           style={{
@@ -138,7 +119,6 @@ const NewPostModal = ({ communityType, onClose, onSubmit }) => {
   );
 };
 NewPostModal.propTypes = {
-  communityType: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
 };

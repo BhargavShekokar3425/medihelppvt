@@ -1,133 +1,111 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useBackendContext } from '../contexts/BackendContext';
 import NewPostModal from './NewPostModal';
 import AddAnswerModal from './AddAnswerModal';
-import CommentSection from './CommentSection'; // Ensure this component exists and is functional
+import CommentSection from './CommentSection';
 
 const CommunityForums = () => {
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      title: "Persistent cough for 3 weeks - should I be concerned?",
-      body: "I've had a dry cough that won't go away since my cold cleared up. No fever but sometimes chest tightness. I'm a 21-year-old non-smoker. Is this normal post-viral or should I get checked?",
-      tags: ["cough", "chest tightness"],
-      author: "Devesh Shekokar (Patient)",
-      upvotes: 10,
-      downvotes: 2,
-      userUpvoted: false,
-      userDownvoted: false,
-      answers: [
-        {
-          body: "You should consult a doctor if the cough persists for more than 3 weeks.",
-          author: "Dr. Nitish Bhambhare (Doctor)",
-          badge: "Doctor Verified Answer",
-          createdAt: new Date()
-        }
-      ],
-      showAnswers: false,
-      comments: []
-    },
-    {
-      id: 2,
-      title: "Can I take paracetamol with my blood pressure medication?",
-      body: "I'm on amlodipine 5mg daily. Got fever today (38°C). Is it safe to take 500mg paracetamol or should I ask my doctor first?",
-      tags: ["paracetamol", "blood pressure"],
-      author: "Saher Dev (Patient)",
-      upvotes: 5,
-      downvotes: 1,
-      userUpvoted: false,
-      userDownvoted: false,
-      answers: [],
-      showAnswers: false,
-      comments: []
-    }
-  ]);
+  const { apiService, currentUser } = useBackendContext();
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [answerModal, setAnswerModal] = useState({ show: false, postId: null });
 
-  const filteredPosts = posts.filter(post =>
-    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.body.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Load posts from API
+  const loadPosts = useCallback(async (search = '') => {
+    try {
+      setLoading(true);
+      if (!apiService) return;
+      const params = search ? `?search=${encodeURIComponent(search)}` : '';
+      const data = await apiService.get(`/forum${params}`);
+      const list = Array.isArray(data) ? data : (data.posts || []);
+      setPosts(list.map(p => ({ ...p, showAnswers: false })));
+    } catch (err) {
+      console.error('Error loading forum posts:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiService]);
 
-  const toggleUpvote = (id) => {
-    setPosts(posts.map(post => {
-      if (post.id === id) {
-        const isUpvoted = !post.userUpvoted;
-        const isDownvoted = post.userDownvoted;
-        return {
-          ...post,
-          upvotes: isUpvoted ? post.upvotes + 1 : post.upvotes - 1,
-          downvotes: isDownvoted ? post.downvotes - 1 : post.downvotes,
-          userUpvoted: isUpvoted,
-          userDownvoted: false
-        };
-      }
-      return post;
-    }));
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadPosts(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, loadPosts]);
+
+  const toggleUpvote = async (id) => {
+    try {
+      if (!apiService) return;
+      const updated = await apiService.post(`/forum/${id}/upvote`);
+      setPosts(prev => prev.map(p => p.id === id ? { ...updated, showAnswers: p.showAnswers } : p));
+    } catch (err) {
+      console.error('Upvote error:', err);
+    }
   };
 
-  const toggleDownvote = (id) => {
-    setPosts(posts.map(post => {
-      if (post.id === id) {
-        const isDownvoted = !post.userDownvoted;
-        const isUpvoted = post.userUpvoted;
-        return {
-          ...post,
-          downvotes: isDownvoted ? post.downvotes + 1 : post.downvotes - 1,
-          upvotes: isUpvoted ? post.upvotes - 1 : post.upvotes,
-          userDownvoted: isDownvoted,
-          userUpvoted: false
-        };
-      }
-      return post;
-    }));
+  const toggleDownvote = async (id) => {
+    try {
+      if (!apiService) return;
+      const updated = await apiService.post(`/forum/${id}/downvote`);
+      setPosts(prev => prev.map(p => p.id === id ? { ...updated, showAnswers: p.showAnswers } : p));
+    } catch (err) {
+      console.error('Downvote error:', err);
+    }
   };
 
-  const addAnswer = (postId, answer) => {
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          answers: [...(post.answers || []), answer]
-        };
-      }
-      return post;
-    }));
+  const addAnswer = async (postId, answer) => {
+    try {
+      if (!apiService) return;
+      const updated = await apiService.post(`/forum/${postId}/answers`, { body: answer.body || answer });
+      setPosts(prev => prev.map(p => p.id === postId ? { ...updated, showAnswers: true } : p));
+    } catch (err) {
+      console.error('Add answer error:', err);
+    }
+  };
+
+  const addComment = async (postId, comment) => {
+    try {
+      if (!apiService) return;
+      const updated = await apiService.post(`/forum/${postId}/comments`, { body: comment.body || comment });
+      setPosts(prev => prev.map(p => p.id === postId ? { ...updated, showAnswers: p.showAnswers } : p));
+    } catch (err) {
+      console.error('Add comment error:', err);
+    }
   };
 
   const toggleAnswersVisibility = (id) => {
-    setPosts(posts.map(post => {
-      if (post.id === id) {
-        return {
-          ...post,
-          showAnswers: !post.showAnswers
-        };
-      }
-      return post;
-    }));
+    setPosts(prev => prev.map(p => p.id === id ? { ...p, showAnswers: !p.showAnswers } : p));
   };
 
-  const addComment = (postId, comment) => {
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          comments: [...post.comments, comment]
-        };
-      }
-      return post;
-    }));
+  const handleCreatePost = async (newPost) => {
+    try {
+      if (!apiService) return;
+      const created = await apiService.post('/forum', {
+        title: newPost.title,
+        body: newPost.body,
+        tags: newPost.tags,
+      });
+      setPosts(prev => [{ ...created, showAnswers: false }, ...prev]);
+    } catch (err) {
+      console.error('Create post error:', err);
+    }
   };
 
   return (
     <div className="container mt-5">
-       <div className="jumbotron gradient-background p-4 p-md-5 text-white rounded bg-dark" style={{marginBottom: "32px"}} >
-            <div className="col px-0 " style={{color:"black"}}>
-              <h1 className="display-4 font-italic" > DocExchange </h1>
-            </div>
-          </div>
+      <div className="jumbotron gradient-background p-4 p-md-5 text-white rounded bg-dark" style={{ marginBottom: '32px' }}>
+        <div className="col px-0" style={{ color: 'black' }}>
+          <h1 className="display-4 font-italic">DocExchange</h1>
+        </div>
+      </div>
+
       <input
         type="text"
         placeholder="Search posts..."
@@ -135,57 +113,98 @@ const CommunityForums = () => {
         onChange={(e) => setSearchQuery(e.target.value)}
         className="form-control mb-3"
       />
-      <button className="btn btn-primary mb-3 gradient-bg" onClick={() => setShowModal(true)}>
-        Create New Post
-      </button>
-      {filteredPosts.map(post => (
-        <div key={post.id} className="card mb-3">
-          <div className="card-body">
-            <h5 className="card-title">{post.title}</h5>
-            <p className="card-text">{post.body}</p>
-            <p><strong>Tags:</strong> {post.tags.join(', ')}</p>
-            <p><strong>Author:</strong> {post.author}</p>
-            <div>
-              <button className="btn btn-success me-2" onClick={() => toggleUpvote(post.id)}>
-                Upvote ({post.upvotes})
-              </button>
-              <button className="btn btn-danger me-2" onClick={() => toggleDownvote(post.id)}>
-                Downvote ({post.downvotes})
-              </button>
-              <button className="btn btn-secondary " onClick={() => setAnswerModal({ show: true, postId: post.id })}>
-                Add Answer
-              </button>
-            </div>
-            {post.answers.length > 0 && (
-              <div className="mt-3">
-                <button className="btn btn-info" onClick={() => toggleAnswersVisibility(post.id)}>
-                  {post.showAnswers ? 'Hide Answers' : `View Answers (${post.answers.length})`}
+
+      {currentUser && (
+        <button className="btn btn-primary mb-3 gradient-bg" onClick={() => setShowModal(true)}>
+          Create New Post
+        </button>
+      )}
+      {!currentUser && (
+        <p className="text-muted mb-3">Please log in to create posts, vote, or comment.</p>
+      )}
+
+      {loading ? (
+        <div className="text-center p-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3">Loading posts...</p>
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="alert alert-info">No posts found. Be the first to start a discussion!</div>
+      ) : (
+        posts.map(post => (
+          <div key={post.id} className="card mb-3">
+            <div className="card-body">
+              <h5 className="card-title">{post.title}</h5>
+              <p className="card-text">{post.body}</p>
+              <p><strong>Tags:</strong> {(post.tags || []).join(', ')}</p>
+              <p><strong>Author:</strong> {post.author}</p>
+              <div>
+                <button
+                  className={`btn ${post.userUpvoted ? 'btn-success' : 'btn-outline-success'} me-2`}
+                  onClick={() => toggleUpvote(post.id)}
+                  disabled={!currentUser}
+                >
+                  Upvote ({post.upvotes})
                 </button>
-                {post.showAnswers && (
-                  <ul className="list-group mt-2">
-                    {post.answers.map((answer, index) => (
-                      <li key={index} className="list-group-item">
-                        <p>{answer.body}</p>
-                        <small><strong>{answer.author}</strong> - {answer.badge}</small>
-                      </li>
-                    ))}
-                  </ul>
+                <button
+                  className={`btn ${post.userDownvoted ? 'btn-danger' : 'btn-outline-danger'} me-2`}
+                  onClick={() => toggleDownvote(post.id)}
+                  disabled={!currentUser}
+                >
+                  Downvote ({post.downvotes})
+                </button>
+                {currentUser && (
+                  <button className="btn btn-secondary" onClick={() => setAnswerModal({ show: true, postId: post.id })}>
+                    Add Answer
+                  </button>
                 )}
               </div>
-            )}
-            <CommentSection
-              comments={post.comments}
-              onAddComment={(comment) => addComment(post.id, comment)}
-            />
+
+              {(post.answers || []).length > 0 && (
+                <div className="mt-3">
+                  <button className="btn btn-info" onClick={() => toggleAnswersVisibility(post.id)}>
+                    {post.showAnswers ? 'Hide Answers' : `View Answers (${post.answers.length})`}
+                  </button>
+                  {post.showAnswers && (
+                    <ul className="list-group mt-2">
+                      {post.answers.map((answer, index) => (
+                        <li key={answer.id || index} className="list-group-item">
+                          <p>{answer.body}</p>
+                          <small>
+                            <strong>{answer.author}</strong>
+                            {answer.badge && <span className="badge bg-primary ms-2">{answer.badge}</span>}
+                          </small>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              <CommentSection
+                comments={(post.comments || []).map(c => ({
+                  ...c,
+                  createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+                }))}
+                onAddComment={(comment) => addComment(post.id, comment)}
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        ))
+      )}
+
       {showModal && (
         <NewPostModal
           onClose={() => setShowModal(false)}
-          onSubmit={(newPost) => setPosts([{ ...newPost, id: posts.length + 1, upvotes: 0, downvotes: 0, userUpvoted: false, userDownvoted: false, answers: [], showAnswers: false, comments: [] }, ...posts])}
+          onSubmit={(newPost) => {
+            handleCreatePost(newPost);
+            setShowModal(false);
+          }}
         />
       )}
+
       {answerModal.show && (
         <AddAnswerModal
           postId={answerModal.postId}
