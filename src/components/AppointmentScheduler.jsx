@@ -3,6 +3,12 @@ import { useBackendContext } from '../contexts/BackendContext';
 
 /**
  * Patient Appointment Scheduler
+ * 
+ * SECURITY: This component only displays data the backend permits:
+ * - Available/Unavailable slots (no details about other patients)
+ * - The patient's own pending/confirmed appointments
+ * - Public doctor info (name, specialization, clinic, rating)
+ * 
  * Features:
  * - Beautiful calendar UI with 30-minute time slots
  * - Color-coded slots: Red=Unavailable, Blue=Available, Yellow=Pending, Green=Confirmed
@@ -48,14 +54,13 @@ export default function AppointmentScheduler() {
   // Doctor detail modal
   const [showDoctorModal, setShowDoctorModal] = useState(false);
 
-  // Status colors for calendar slots
+  // Status colors for calendar slots (patient view only)
+  // Patients see: available, unavailable, their own pending, their own confirmed
   const slotColors = {
     available: { bg: '#DBEAFE', text: '#1E40AF', border: '#3B82F6', label: 'Available' },
     unavailable: { bg: '#FEE2E2', text: '#991B1B', border: '#EF4444', label: 'Unavailable' },
     pending: { bg: '#FEF3C7', text: '#92400E', border: '#F59E0B', label: 'Your Pending' },
-    confirmed: { bg: '#D1FAE5', text: '#065F46', border: '#10B981', label: 'Your Confirmed' },
-    blocked: { bg: '#F3F4F6', text: '#6B7280', border: '#D1D5DB', label: 'Blocked' },
-    break: { bg: '#F9FAFB', text: '#9CA3AF', border: '#E5E7EB', label: 'Break' }
+    confirmed: { bg: '#D1FAE5', text: '#065F46', border: '#10B981', label: 'Your Confirmed' }
   };
 
   // Generate dates for current week
@@ -211,6 +216,7 @@ export default function AppointmentScheduler() {
   };
 
   // Get slot status for a specific date and time
+  // SECURITY: Only uses data the backend has already sanitized
   const getSlotStatus = (date, timeSlot) => {
     const dateStr = date.toISOString().split('T')[0];
     const key = `${dateStr}-${timeSlot}`;
@@ -227,40 +233,31 @@ export default function AppointmentScheduler() {
     slotDateTime.setHours(hour24, mins);
     
     if (slotDateTime < now) {
-      return { status: 'unavailable', data: null };
+      return { status: 'unavailable' };
     }
     
-    // Check if day is a working day
+    // Check if day is a working day (from public doctor info)
     if (selectedDoctor?.workingDays) {
       const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
       if (!selectedDoctor.workingDays.includes(dayName)) {
-        return { status: 'unavailable', data: null };
+        return { status: 'unavailable' };
       }
     }
     
-    // Check break time
-    if (selectedDoctor?.breakTime) {
-      const breakStart = selectedDoctor.breakTime.start;
-      const breakEnd = selectedDoctor.breakTime.end;
-      // Simple comparison (assuming same format)
-      if (timeSlot >= breakStart && timeSlot < breakEnd) {
-        return { status: 'break', data: null };
-      }
-    }
-    
+    // Backend returns sanitized slot data:
+    // - { status: 'unavailable' } for other patients' slots, blocked, or break
+    // - { status: 'pending'|'confirmed', isOwn: true } for patient's own
+    // - No entry means available
     if (slotData) {
-      if (slotData.status === 'blocked') {
-        return { status: 'blocked', data: slotData };
-      }
       if (slotData.isOwn) {
         // This is the current user's appointment
-        return { status: slotData.status, data: slotData };
+        return { status: slotData.status };
       }
-      // Someone else's appointment
-      return { status: 'unavailable', data: slotData };
+      // Any other occupied slot — backend already sanitized to 'unavailable'
+      return { status: 'unavailable' };
     }
     
-    return { status: 'available', data: null };
+    return { status: 'available' };
   };
 
   // Handle slot click
@@ -575,18 +572,6 @@ export default function AppointmentScheduler() {
       backgroundColor: slotColors.confirmed.bg,
       borderColor: slotColors.confirmed.border,
       color: slotColors.confirmed.text
-    },
-    slotBlocked: {
-      backgroundColor: slotColors.blocked.bg,
-      borderColor: slotColors.blocked.border,
-      color: slotColors.blocked.text,
-      cursor: 'not-allowed'
-    },
-    slotBreak: {
-      backgroundColor: slotColors.break.bg,
-      borderColor: slotColors.break.border,
-      color: slotColors.break.text,
-      cursor: 'not-allowed'
     },
     // Doctor detail card
     doctorCard: {
@@ -1054,7 +1039,7 @@ export default function AppointmentScheduler() {
               </div>
               <div style={styles.calendarTitle}>{formatMonthYear()}</div>
               <div style={styles.legend}>
-                {Object.entries(slotColors).slice(0, 4).map(([key, value]) => (
+                {Object.entries(slotColors).map(([key, value]) => (
                   <div key={key} style={styles.legendItem}>
                     <div style={{ ...styles.legendDot, backgroundColor: value.bg, border: `1px solid ${value.border}` }} />
                     <span>{value.label}</span>
@@ -1108,9 +1093,7 @@ export default function AppointmentScheduler() {
                         available: styles.slotAvailable,
                         unavailable: styles.slotUnavailable,
                         pending: styles.slotPending,
-                        confirmed: styles.slotConfirmed,
-                        blocked: styles.slotBlocked,
-                        break: styles.slotBreak
+                        confirmed: styles.slotConfirmed
                       }[status] || styles.slotUnavailable;
                       
                       return (

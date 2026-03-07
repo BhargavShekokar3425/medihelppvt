@@ -48,7 +48,7 @@ function App() {
             </AuthWrapper>
           } />
           <Route path="/scheduler" element={
-            <AuthWrapper>
+            <AuthWrapper requiredRole="patient">
               <AppointmentScheduler />
             </AuthWrapper>
           } />

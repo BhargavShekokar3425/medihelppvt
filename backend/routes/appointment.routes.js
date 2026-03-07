@@ -8,7 +8,8 @@ const { protect, authorize } = require('../middleware/auth');
 // PATIENT ROUTES
 // ============================================
 
-// GET /api/appointments — user's appointments (patient or doctor)
+// GET /api/appointments — user's own appointments only
+// SECURITY: Returns only the authenticated user's appointments with role-appropriate fields
 router.get('/', protect, async (req, res, next) => {
   try {
     const { status, startDate, endDate } = req.query;
@@ -23,11 +24,17 @@ router.get('/', protect, async (req, res, next) => {
       if (endDate) filter.date.$lte = endDate;
     }
 
-    const appointments = await Appointment.find(filter)
-      .populate('patient', 'name email phone bloodGroup gender')
-      .populate('doctor', 'name email specialization phone clinic avatar profileImage')
-      .sort({ date: 1, timeSlot: 1 });
+    let query = Appointment.find(filter).sort({ date: 1, timeSlot: 1 });
 
+    if (req.user.role === 'doctor') {
+      // Doctor sees patient details for THEIR appointments
+      query = query.populate('patient', 'name email phone bloodGroup gender allergies');
+    } else {
+      // Patient sees doctor info (public details only) — no other patient info
+      query = query.populate('doctor', 'name specialization clinic.name clinic.address clinic.phone avatar');
+    }
+
+    const appointments = await query;
     res.json(appointments);
   } catch (err) {
     next(err);
@@ -35,6 +42,7 @@ router.get('/', protect, async (req, res, next) => {
 });
 
 // GET /api/appointments/upcoming - Get upcoming appointments for current user
+// SECURITY: Only returns the authenticated user's upcoming appointments
 router.get('/upcoming', protect, async (req, res, next) => {
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -45,12 +53,17 @@ router.get('/upcoming', protect, async (req, res, next) => {
     filter.date = { $gte: today };
     filter.status = { $in: ['pending', 'confirmed'] };
 
-    const appointments = await Appointment.find(filter)
-      .populate('patient', 'name email phone')
-      .populate('doctor', 'name email specialization clinic phone avatar')
+    let query = Appointment.find(filter)
       .sort({ date: 1, timeSlot: 1 })
       .limit(10);
 
+    if (req.user.role === 'doctor') {
+      query = query.populate('patient', 'name phone');
+    } else {
+      query = query.populate('doctor', 'name specialization clinic.name clinic.address avatar');
+    }
+
+    const appointments = await query;
     res.json(appointments);
   } catch (err) {
     next(err);
@@ -58,10 +71,18 @@ router.get('/upcoming', protect, async (req, res, next) => {
 });
 
 // GET /api/appointments/doctor-availability/:doctorId - Get doctor's availability for calendar
+// SECURITY: Patients only see available/unavailable + their own appointments
+// Doctors only see their OWN schedule (not other doctors')
 router.get('/doctor-availability/:doctorId', protect, async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
     const doctorId = req.params.doctorId;
+    const isRequestingDoctor = req.user.role === 'doctor';
+
+    // SECURITY: Doctors can only view their own availability
+    if (isRequestingDoctor && !req.user._id.equals(doctorId)) {
+      return res.status(403).json({ message: 'Doctors can only view their own schedule.' });
+    }
 
     const doctor = await User.findById(doctorId).select('workingDays workingHours slotDuration breakTime blockedSlots clinic name');
     if (!doctor) {
@@ -69,7 +90,10 @@ router.get('/doctor-availability/:doctorId', protect, async (req, res, next) => 
     }
 
     // Get all appointments for this doctor in date range
-    const filter = { doctor: doctorId };
+    const filter = { 
+      doctor: doctorId,
+      status: { $nin: ['cancelled', 'rejected'] }
+    };
     if (startDate || endDate) {
       filter.date = {};
       if (startDate) filter.date.$gte = startDate;
@@ -77,28 +101,46 @@ router.get('/doctor-availability/:doctorId', protect, async (req, res, next) => 
     }
 
     const appointments = await Appointment.find(filter)
-      .select('date timeSlot endTimeSlot duration status patient patientName')
+      .select('date timeSlot endTimeSlot duration status patient')
       .lean();
 
     // Build availability map
     const availability = {};
     appointments.forEach(apt => {
       const key = `${apt.date}-${apt.timeSlot}`;
-      availability[key] = {
-        status: apt.status,
-        appointmentId: apt._id,
-        patientName: req.user._id.equals(apt.patient) ? apt.patientName : null,
-        isOwn: req.user._id.equals(apt.patient),
-        duration: apt.duration
-      };
+      const isOwnAppointment = req.user._id.equals(apt.patient);
+
+      if (isRequestingDoctor) {
+        // Doctor sees their own full schedule (but this is only their own)
+        availability[key] = {
+          status: apt.status,
+          appointmentId: apt._id,
+          duration: apt.duration
+        };
+      } else {
+        // PATIENT view — only see own appointment details, everything else is just "unavailable"
+        if (isOwnAppointment) {
+          availability[key] = {
+            status: apt.status,
+            isOwn: true
+          };
+        } else {
+          // Another patient's slot — only show that it's unavailable, NOTHING else
+          availability[key] = {
+            status: 'unavailable'
+          };
+        }
+      }
     });
 
-    // Add blocked slots
+    // Add blocked slots (show as unavailable to patients, blocked to doctors)
     if (doctor.blockedSlots) {
       doctor.blockedSlots.forEach(slot => {
         if ((!startDate || slot.date >= startDate) && (!endDate || slot.date <= endDate)) {
           const key = `${slot.date}-${slot.timeSlot}`;
-          availability[key] = { status: 'blocked', reason: slot.reason };
+          availability[key] = isRequestingDoctor
+            ? { status: 'blocked', reason: slot.reason }
+            : { status: 'unavailable' };
         }
       });
     }
@@ -110,8 +152,13 @@ router.get('/doctor-availability/:doctorId', protect, async (req, res, next) => 
         workingDays: doctor.workingDays,
         workingHours: doctor.workingHours,
         slotDuration: doctor.slotDuration || 30,
-        breakTime: doctor.breakTime,
-        clinic: doctor.clinic
+        breakTime: isRequestingDoctor ? doctor.breakTime : undefined,
+        clinic: {
+          name: doctor.clinic?.name,
+          address: doctor.clinic?.address,
+          phone: doctor.clinic?.phone,
+          timings: doctor.clinic?.timings
+        }
       },
       availability
     });
@@ -121,6 +168,7 @@ router.get('/doctor-availability/:doctorId', protect, async (req, res, next) => 
 });
 
 // GET /api/appointments/check-availability
+// SECURITY: Only returns boolean availability — no status or details leaked
 router.get('/check-availability', protect, async (req, res, next) => {
   try {
     const { doctorId, date, timeSlot } = req.query;
@@ -131,7 +179,7 @@ router.get('/check-availability', protect, async (req, res, next) => {
     // Check if slot is blocked by doctor
     const doctor = await User.findById(doctorId).select('blockedSlots');
     if (doctor?.blockedSlots?.some(s => s.date === date && s.timeSlot === timeSlot)) {
-      return res.json({ available: false, reason: 'blocked' });
+      return res.json({ available: false });
     }
 
     const existing = await Appointment.findOne({
@@ -141,22 +189,25 @@ router.get('/check-availability', protect, async (req, res, next) => {
       status: { $nin: ['cancelled', 'rejected'] },
     });
 
-    res.json({ 
-      available: !existing, 
-      doctorId, 
-      date, 
-      timeSlot,
-      existingStatus: existing?.status 
-    });
+    // SECURITY: Only return whether it's available — not WHY or existing status
+    res.json({ available: !existing });
   } catch (err) {
     next(err);
   }
 });
 
 // GET /api/appointments/booked-slots/:doctorId
+// SECURITY: Only returns date/time/own status — no patient details leaked
 router.get('/booked-slots/:doctorId', protect, async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
+    const isRequestingDoctor = req.user.role === 'doctor' && req.user._id.equals(req.params.doctorId);
+
+    // SECURITY: Other doctors cannot query this endpoint for other doctors
+    if (req.user.role === 'doctor' && !req.user._id.equals(req.params.doctorId)) {
+      return res.status(403).json({ message: 'Doctors can only view their own booked slots.' });
+    }
+
     const filter = { 
       doctor: req.params.doctorId, 
       status: { $nin: ['cancelled', 'rejected'] } 
@@ -165,17 +216,25 @@ router.get('/booked-slots/:doctorId', protect, async (req, res, next) => {
     if (endDate) filter.date = { ...(filter.date || {}), $lte: endDate };
 
     const slots = await Appointment.find(filter)
-      .select('date timeSlot endTimeSlot duration status doctorName patientName patient')
+      .select('date timeSlot status patient')
       .lean();
 
-    // Mark which ones belong to the current user
-    const enrichedSlots = slots.map(slot => ({
-      ...slot,
-      isOwn: req.user._id.equals(slot.patient),
-      patientName: req.user._id.equals(slot.patient) ? slot.patientName : undefined
-    }));
+    // SECURITY: Sanitize output based on role
+    const sanitizedSlots = slots.map(slot => {
+      const isOwn = req.user._id.equals(slot.patient);
+      if (isRequestingDoctor) {
+        return { date: slot.date, timeSlot: slot.timeSlot, status: slot.status };
+      }
+      // Patient view: only show own status or "unavailable"
+      return {
+        date: slot.date,
+        timeSlot: slot.timeSlot,
+        isOwn,
+        status: isOwn ? slot.status : 'unavailable'
+      };
+    });
 
-    res.json(enrichedSlots);
+    res.json(sanitizedSlots);
   } catch (err) {
     next(err);
   }
@@ -549,45 +608,62 @@ router.put('/update-availability', protect, authorize('doctor'), async (req, res
 // ============================================
 
 // GET /api/appointments/:id — get single appointment
+// SECURITY: Role-based field exposure
 router.get('/:id', protect, async (req, res, next) => {
   try {
-    const appointment = await Appointment.findById(req.params.id)
-      .populate('patient', 'name email phone bloodGroup gender allergies medicalConditions')
-      .populate('doctor', 'name email specialization phone clinic avatar');
+    const appointment = await Appointment.findById(req.params.id);
 
     if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found.' });
     }
 
-    // Check authorization
-    const isOwner = req.user._id.equals(appointment.patient._id) || 
-                    req.user._id.equals(appointment.doctor._id) ||
-                    req.user.role === 'admin';
-    if (!isOwner) {
+    // Check authorization — only the patient, their doctor, or admin can view
+    const isPatient = req.user._id.equals(appointment.patient);
+    const isDoctor = req.user._id.equals(appointment.doctor);
+    const isAdmin = req.user.role === 'admin';
+    if (!isPatient && !isDoctor && !isAdmin) {
       return res.status(403).json({ message: 'Not authorized.' });
     }
 
-    res.json(appointment);
+    let populated;
+    if (isDoctor || isAdmin) {
+      // Doctor sees patient details
+      populated = await Appointment.findById(req.params.id)
+        .populate('patient', 'name email phone bloodGroup gender allergies medicalConditions');
+    } else {
+      // Patient sees doctor public info only
+      populated = await Appointment.findById(req.params.id)
+        .populate('doctor', 'name specialization clinic.name clinic.address clinic.phone avatar');
+    }
+
+    res.json(populated);
   } catch (err) {
     next(err);
   }
 });
 
 // PUT /api/appointments/:id — update appointment
+// SECURITY: Patients can only update their own limited fields, doctors their own appointments
 router.put('/:id', protect, async (req, res, next) => {
   try {
     const appointment = await Appointment.findById(req.params.id);
     if (!appointment) return res.status(404).json({ message: 'Appointment not found.' });
 
-    const isOwner =
-      req.user._id.equals(appointment.patient) ||
-      req.user._id.equals(appointment.doctor) ||
-      req.user.role === 'admin';
-    if (!isOwner) return res.status(403).json({ message: 'Not authorised.' });
+    const isPatient = req.user._id.equals(appointment.patient);
+    const isDoctor = req.user._id.equals(appointment.doctor);
+    const isAdmin = req.user.role === 'admin';
+    if (!isPatient && !isDoctor && !isAdmin) {
+      return res.status(403).json({ message: 'Not authorised.' });
+    }
 
-    // Patients can only update certain fields
-    if (req.user.role === 'patient') {
+    // Strict field control based on role
+    if (isPatient) {
       const allowed = ['reason', 'symptoms', 'notes'];
+      Object.keys(req.body).forEach(key => {
+        if (!allowed.includes(key)) delete req.body[key];
+      });
+    } else if (isDoctor) {
+      const allowed = ['doctorNotes', 'duration', 'status'];
       Object.keys(req.body).forEach(key => {
         if (!allowed.includes(key)) delete req.body[key];
       });
@@ -596,9 +672,15 @@ router.put('/:id', protect, async (req, res, next) => {
     Object.assign(appointment, req.body);
     await appointment.save();
     
-    const populated = await Appointment.findById(appointment._id)
-      .populate('patient', 'name email phone')
-      .populate('doctor', 'name email specialization clinic');
+    // Return role-appropriate populated data
+    let populated;
+    if (isDoctor || isAdmin) {
+      populated = await Appointment.findById(appointment._id)
+        .populate('patient', 'name phone');
+    } else {
+      populated = await Appointment.findById(appointment._id)
+        .populate('doctor', 'name specialization clinic.name');
+    }
     
     res.json(populated);
   } catch (err) {

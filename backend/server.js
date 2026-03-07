@@ -102,6 +102,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve uploaded files (profile photos etc.)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // --------------- API Routes ---------------
 app.get('/api', (_req, res) => res.json({ status: 'ok', message: 'MediHelp API is running.' }));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: process.uptime() }));

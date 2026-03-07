@@ -107,7 +107,28 @@ const apiService = {
       throw error;
     }
   },
-  
+
+  // Upload a file using multipart/form-data
+  upload: async (endpoint, formData) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}${endpoint}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`UPLOAD ${endpoint} error:`, error);
+      const errorMessage = error.response?.data?.message || error.message || 'Upload failed';
+      const enhancedError = new Error(errorMessage);
+      enhancedError.status = error.response?.status;
+      enhancedError.data = error.response?.data;
+      throw enhancedError;
+    }
+  },
+
   delete: async (endpoint) => {
     try {
       const response = await axiosInstance.delete(endpoint);

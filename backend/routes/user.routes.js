@@ -1,27 +1,95 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const multer = require('multer');
 const User = require('../models/User.model');
+const Appointment = require('../models/Appointment.model');
 const { protect, authorize } = require('../middleware/auth');
 
-// GET /api/users/profile — get current user
+// ---- Multer config for profile photo uploads ----
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '..', 'uploads', 'avatars'));
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `avatar-${req.user._id}-${Date.now()}${ext}`);
+  }
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp|avif/;
+    const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mimeOk = allowed.test(file.mimetype);
+    if (extOk && mimeOk) return cb(null, true);
+    cb(new Error('Only image files (jpg, png, gif, webp) are allowed.'));
+  }
+});
+
+// GET /api/users/profile — get current user (no password)
 router.get('/profile', protect, async (req, res, next) => {
   try {
-    res.json(req.user);
+    const user = await User.findById(req.user._id).select('-password');
+    res.json(user);
   } catch (err) {
     next(err);
   }
 });
 
-// PUT /api/users/profile OR /api/users/profile/:id — update current user
+// PUT /api/users/profile — update current user's profile
 router.put('/profile/:id?', protect, async (req, res, next) => {
   try {
     // Prevent changing password / role via this endpoint
-    const { password, role, ...updateData } = req.body;
+    const { password, role, _id, __v, ...updateData } = req.body;
+    
+    // Role-specific field restrictions
+    if (req.user.role === 'patient') {
+      // Patients can update these fields
+      const allowed = ['name', 'phone', 'gender', 'dateOfBirth', 'bloodGroup', 
+                        'allergies', 'medicalConditions', 'address', 
+                        'location', 'avatar', 'profileImage'];
+      Object.keys(updateData).forEach(key => {
+        if (!allowed.includes(key)) delete updateData[key];
+      });
+    } else if (req.user.role === 'doctor') {
+      // Doctors can update these fields
+      const allowed = ['name', 'phone', 'gender', 'dateOfBirth', 'bio',
+                        'qualifications', 'experience', 'languages',
+                        'clinic', 'location', 'consultationFee',
+                        'avatar', 'profileImage', 'specialization'];
+      Object.keys(updateData).forEach(key => {
+        if (!allowed.includes(key)) delete updateData[key];
+      });
+    }
+    
     const user = await User.findByIdAndUpdate(req.user._id, updateData, {
       new: true,
       runValidators: true,
-    });
+    }).select('-password');
     res.json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/users/profile/photo — upload profile photo
+router.post('/profile/photo', protect, upload.single('photo'), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded.' });
+    }
+    
+    const photoUrl = `/uploads/avatars/${req.file.filename}`;
+    
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { avatar: photoUrl, profileImage: photoUrl },
+      { new: true }
+    ).select('-password');
+    
+    res.json({ photoUrl, user });
   } catch (err) {
     next(err);
   }
@@ -83,6 +151,9 @@ router.get('/doctors', async (req, res, next) => {
       filter.consultationFee = { $lte: parseFloat(maxFee) };
     }
 
+    // SECURITY: Only expose public-facing fields for doctors
+    const publicDoctorFields = 'name specialization experience qualifications consultationFee rating totalReviews bio languages avatar profileImage location.city location.state clinic.name clinic.address clinic.phone clinic.timings clinic.location workingDays';
+
     // Geo-spatial query if lat/lng provided
     let doctors;
     if (lat && lng) {
@@ -104,7 +175,17 @@ router.get('/doctors', async (req, res, next) => {
         { $limit: parseInt(limit) },
         {
           $project: {
-            password: 0
+            password: 0,
+            blockedSlots: 0,
+            breakTime: 0,
+            workingHours: 0,
+            email: 0,
+            phone: 0,
+            slotDuration: 0,
+            medicalConditions: 0,
+            allergies: 0,
+            bloodGroup: 0,
+            dateOfBirth: 0
           }
         }
       ]);
@@ -124,7 +205,7 @@ router.get('/doctors', async (req, res, next) => {
       };
 
       doctors = await User.find(filter)
-        .select('-password')
+        .select(publicDoctorFields)
         .sort(sortOptions[sortBy] || sortOptions.rating)
         .skip((parseInt(page) - 1) * parseInt(limit))
         .limit(parseInt(limit));
@@ -147,11 +228,11 @@ router.get('/doctors', async (req, res, next) => {
   }
 });
 
-// GET /api/users/doctors/:id — get single doctor with full details
+// GET /api/users/doctors/:id — get single doctor with public details only
 router.get('/doctors/:id', async (req, res, next) => {
   try {
     const doctor = await User.findOne({ _id: req.params.id, role: 'doctor' })
-      .select('-password');
+      .select('name specialization experience qualifications consultationFee rating totalReviews bio languages avatar profileImage location.city location.state clinic.name clinic.address clinic.phone clinic.timings workingDays');
     
     if (!doctor) {
       return res.status(404).json({ message: 'Doctor not found' });
@@ -189,11 +270,19 @@ router.get('/cities', async (req, res, next) => {
   }
 });
 
-// GET /api/users/patients — doctor-only
+// GET /api/users/patients — doctor can only see THEIR OWN patients
+// SECURITY: Only returns patients who have had appointments with this doctor
 router.get('/patients', protect, authorize('doctor'), async (req, res, next) => {
   try {
     const { search } = req.query;
-    const filter = { role: 'patient' };
+    
+    // Find unique patient IDs from this doctor's appointments
+    const patientIds = await Appointment.distinct('patient', { doctor: req.user._id });
+    
+    const filter = { 
+      _id: { $in: patientIds },
+      role: 'patient' 
+    };
     
     if (search) {
       filter.$or = [
@@ -203,7 +292,9 @@ router.get('/patients', protect, authorize('doctor'), async (req, res, next) => 
       ];
     }
 
-    const patients = await User.find(filter).select('-password');
+    // Only return relevant medical details, not full profile
+    const patients = await User.find(filter)
+      .select('name email phone gender bloodGroup allergies medicalConditions dateOfBirth avatar');
     res.json(patients);
   } catch (err) {
     next(err);

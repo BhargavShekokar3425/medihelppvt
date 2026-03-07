@@ -3,13 +3,20 @@ import { useBackendContext } from '../contexts/BackendContext';
 
 /**
  * Doctor Dashboard - Appointment Management
+ * 
+ * SECURITY BOUNDARIES:
+ * - Doctors can ONLY see their own schedule and their own patients
+ * - Cannot browse other doctors' schedules or patient lists  
+ * - Patient details (phone, blood group, allergies) only shown for the doctor's own appointments
+ * - All API endpoints are auth-guarded with role='doctor' + ownership checks
+ * 
  * Features:
- * - View all appointments by date
- * - Pending appointments queue
- * - Today's schedule
- * - Confirm/Reject/Reschedule appointments
- * - Block/Unblock time slots
- * - Update availability settings
+ * - View own appointments by date
+ * - Pending appointment requests queue (only this doctor's)
+ * - Today's schedule overview
+ * - Confirm/Reject/Reschedule actions on own appointments
+ * - Block/Unblock time slots for own schedule
+ * - Update own availability settings
  */
 export default function DoctorDashboard() {
   const { currentUser, apiService } = useBackendContext();

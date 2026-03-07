@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AppointmentScheduler from '../components/AppointmentScheduler';
+import DoctorDashboard from '../components/DoctorDashboard';
 import { useBackendContext } from '../contexts/BackendContext';
 import { Link } from 'react-router-dom';
 
@@ -8,6 +9,8 @@ const Appointments = () => {
   const [userAppointments, setUserAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  const isDoctor = currentUser?.role === 'doctor';
   
   // Load existing appointments when component mounts
   useEffect(() => {
@@ -28,6 +31,11 @@ const Appointments = () => {
     
     loadAppointments();
   }, [currentUser, apiService]);
+
+  // Doctors see their own dashboard — not the patient scheduler
+  if (isDoctor) {
+    return <DoctorDashboard />;
+  }
   
   return (
     <div className="appointments-page">

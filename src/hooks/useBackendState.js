@@ -122,7 +122,7 @@ export const useBackendState = () => {
         throw new Error("User not authenticated");
       }
       
-      const response = await apiService.put(`/users/profile/${currentUser.id}`, userData);
+      const response = await apiService.put('/users/profile', userData);
       
       // Update stored user data
       const updatedUser = { ...currentUser, ...response };
