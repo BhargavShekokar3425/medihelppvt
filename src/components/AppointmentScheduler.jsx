@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { useBackendContext } from '../contexts/BackendContext';
 
 /**
@@ -16,7 +17,7 @@ import { useBackendContext } from '../contexts/BackendContext';
  * - Doctor profile cards with clinic details
  * - Location-based filtering
  */
-export default function AppointmentScheduler() {
+export default function AppointmentScheduler({ preSelectedDoctorId }) {
   const { currentUser, apiService } = useBackendContext();
   
   // State
@@ -106,16 +107,21 @@ export default function AppointmentScheduler() {
       const doctorsList = res.doctors || res.data?.doctors || res;
       setDoctors(Array.isArray(doctorsList) ? doctorsList : []);
       
-      // Auto-select first doctor if none selected
+      // Auto-select: pre-selected doctor from route state, or first doctor
       if (!selectedDoctor && doctorsList.length > 0) {
-        setSelectedDoctor(doctorsList[0]);
+        if (preSelectedDoctorId) {
+          const match = doctorsList.find(d => (d._id || d.id) === preSelectedDoctorId);
+          setSelectedDoctor(match || doctorsList[0]);
+        } else {
+          setSelectedDoctor(doctorsList[0]);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch doctors:', err);
     } finally {
       setDoctorsLoading(false);
     }
-  }, [apiService, filters, selectedDoctor]);
+  }, [apiService, filters, selectedDoctor, preSelectedDoctorId]);
 
   // Fetch filter options
   useEffect(() => {
@@ -1418,3 +1424,7 @@ export default function AppointmentScheduler() {
     </div>
   );
 }
+
+AppointmentScheduler.propTypes = {
+  preSelectedDoctorId: PropTypes.string
+};

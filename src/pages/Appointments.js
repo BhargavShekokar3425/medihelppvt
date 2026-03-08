@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import AppointmentScheduler from '../components/AppointmentScheduler';
 import DoctorDashboard from '../components/DoctorDashboard';
 import { useBackendContext } from '../contexts/BackendContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const Appointments = () => {
   const { currentUser, apiService } = useBackendContext();
+  const location = useLocation();
+  const preSelectedDoctorId = location.state?.selectedDoctorId || null;
   const [userAppointments, setUserAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -139,7 +141,7 @@ const Appointments = () => {
       {/* Appointment Scheduler Component */}
       <div className="scheduler-container">
         <h2 className="mb-4">Schedule a New Appointment</h2>
-        <AppointmentScheduler />
+        <AppointmentScheduler preSelectedDoctorId={preSelectedDoctorId} />
       </div>
     </div>
   );

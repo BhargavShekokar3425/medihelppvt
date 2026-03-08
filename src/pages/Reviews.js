@@ -42,7 +42,7 @@ const Reviews = () => {
       try {
         const { default: apiService } = await import('../services/apiService');
         const response = await apiService.get('/users/doctors');
-        setDoctors(response);
+        setDoctors(Array.isArray(response) ? response : response.doctors || []);
       } catch (err) {
         console.error("Failed to fetch doctors:", err);
       }

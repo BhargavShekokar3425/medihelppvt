@@ -17,8 +17,10 @@ const Doctors = () => {
         let doctorsList = [];
         if (apiService) {
           const raw = await apiService.get('/users/doctors');
+          // API returns { doctors: [...], pagination: {...} } — extract the array
+          const doctorsArray = Array.isArray(raw) ? raw : (raw?.doctors || []);
           // Map backend fields to display fields
-          doctorsList = (raw || []).map(d => ({
+          doctorsList = doctorsArray.map(d => ({
             id: d.id || d._id,
             name: d.name,
             specialization: d.specialization || 'General',
