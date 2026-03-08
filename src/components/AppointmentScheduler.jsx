@@ -54,6 +54,9 @@ export default function AppointmentScheduler() {
   // Doctor detail modal
   const [showDoctorModal, setShowDoctorModal] = useState(false);
 
+  // Success confirmation overlay
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+
   // Status colors for calendar slots (patient view only)
   // Patients see: available, unavailable, their own pending, their own confirmed
   const slotColors = {
@@ -288,10 +291,10 @@ export default function AppointmentScheduler() {
         symptoms: bookingData.symptoms ? bookingData.symptoms.split(',').map(s => s.trim()) : []
       });
       
-      alert('Appointment request sent successfully! Waiting for doctor confirmation.');
       setShowBookingModal(false);
       setSelectedSlot(null);
       setBookingData({ reason: '', symptoms: '' });
+      setShowSuccessOverlay(true);
       fetchAvailability();
       fetchMyAppointments();
     } catch (err) {
@@ -806,6 +809,100 @@ export default function AppointmentScheduler() {
       textAlign: 'center',
       padding: '48px 24px',
       color: '#6B7280'
+    },
+    // Success overlay
+    successOverlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 2000,
+      animation: 'successFadeIn 0.3s ease-out'
+    },
+    successCard: {
+      backgroundColor: 'white',
+      borderRadius: '24px',
+      padding: '48px 40px',
+      textAlign: 'center',
+      maxWidth: '420px',
+      width: '90%',
+      boxShadow: '0 25px 60px rgba(0,0,0,0.15)',
+      animation: 'successSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+    },
+    successIconRing: {
+      width: '88px',
+      height: '88px',
+      borderRadius: '50%',
+      background: 'linear-gradient(135deg, #10B981, #34D399)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      margin: '0 auto 24px',
+      boxShadow: '0 8px 24px rgba(16,185,129,0.3)',
+      animation: 'successPop 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both'
+    },
+    successCheckmark: {
+      width: '40px',
+      height: '40px',
+      color: 'white'
+    },
+    successTitle: {
+      fontSize: '22px',
+      fontWeight: '700',
+      color: '#111827',
+      marginBottom: '8px',
+      animation: 'successFadeUp 0.5s ease-out 0.35s both'
+    },
+    successSubtitle: {
+      fontSize: '15px',
+      color: '#6B7280',
+      lineHeight: '1.6',
+      marginBottom: '28px',
+      animation: 'successFadeUp 0.5s ease-out 0.45s both'
+    },
+    successPulse: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '10px',
+      padding: '12px 20px',
+      backgroundColor: '#FFF7ED',
+      border: '1px solid #FED7AA',
+      borderRadius: '12px',
+      marginBottom: '28px',
+      animation: 'successFadeUp 0.5s ease-out 0.55s both'
+    },
+    successPulseDot: {
+      width: '8px',
+      height: '8px',
+      borderRadius: '50%',
+      backgroundColor: '#F59E0B',
+      animation: 'successBlink 1.4s ease-in-out infinite'
+    },
+    successPulseText: {
+      fontSize: '14px',
+      fontWeight: '600',
+      color: '#92400E'
+    },
+    successDoneBtn: {
+      padding: '14px 48px',
+      border: 'none',
+      borderRadius: '12px',
+      background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+      color: 'white',
+      fontSize: '15px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'transform 0.2s, box-shadow 0.2s',
+      boxShadow: '0 4px 14px rgba(59,130,246,0.35)',
+      animation: 'successFadeUp 0.5s ease-out 0.65s both'
     }
   };
 
@@ -831,6 +928,38 @@ export default function AppointmentScheduler() {
 
   return (
     <div style={styles.container}>
+      {/* CSS keyframes for success overlay animations */}
+      <style>{`
+        @keyframes successFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes successSlideUp {
+          from { opacity: 0; transform: translateY(40px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes successPop {
+          from { opacity: 0; transform: scale(0.3); }
+          60% { transform: scale(1.1); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes successFadeUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes successBlink {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.3; transform: scale(0.7); }
+        }
+        @keyframes successCheckDraw {
+          from { stroke-dashoffset: 30; }
+          to { stroke-dashoffset: 0; }
+        }
+        .success-done-btn:hover {
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 20px rgba(59,130,246,0.45) !important;
+        }
+      `}</style>
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>Book an Appointment</h1>
@@ -1248,6 +1377,41 @@ export default function AppointmentScheduler() {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Confirmation Overlay */}
+      {showSuccessOverlay && (
+        <div style={styles.successOverlay} onClick={() => setShowSuccessOverlay(false)}>
+          <div style={styles.successCard} onClick={(e) => e.stopPropagation()}>
+            {/* Animated green checkmark circle */}
+            <div style={styles.successIconRing}>
+              <svg style={styles.successCheckmark} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="5 13 10 18 19 6" style={{ strokeDasharray: 30, animation: 'successCheckDraw 0.5s ease-out 0.5s both' }} />
+              </svg>
+            </div>
+
+            <h2 style={styles.successTitle}>Request Sent!</h2>
+            <p style={styles.successSubtitle}>
+              Your appointment request has been submitted successfully. The doctor will review and confirm shortly.
+            </p>
+
+            {/* Animated waiting indicator */}
+            <div style={styles.successPulse}>
+              <span style={{ ...styles.successPulseDot }} />
+              <span style={{ ...styles.successPulseDot, animationDelay: '0.2s' }} />
+              <span style={{ ...styles.successPulseDot, animationDelay: '0.4s' }} />
+              <span style={styles.successPulseText}>Awaiting doctor&apos;s response</span>
+            </div>
+
+            <button
+              className="success-done-btn"
+              style={styles.successDoneBtn}
+              onClick={() => setShowSuccessOverlay(false)}
+            >
+              Done
+            </button>
           </div>
         </div>
       )}
