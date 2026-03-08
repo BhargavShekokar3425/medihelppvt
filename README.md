@@ -114,6 +114,23 @@ medihelppvt/
 - **MongoDB** (local or Atlas cloud)
 - **Google Chrome** (for screenshot scripts, optional)
 
+> **New to all this?** Follow the [Complete Beginner Setup Guide](docs/SETUP_GUIDE.md) — it walks through installing Node.js, MongoDB, Git, Twilio, Gmail App Passwords, and everything else from scratch, for both **Windows** and **Linux**.
+
+### Quick Setup (one command)
+
+After cloning, run the interactive setup script — it handles everything:
+
+```bash
+git clone https://github.com/BhargavShekokar3425/medihelppvt.git
+cd medihelppvt
+npm run install-all
+node scripts/setup.js
+```
+
+The script will auto-detect your system, generate secrets, ask for your MongoDB URI, and optionally configure email/SMS — no manual file editing needed.
+
+### Manual Setup
+
 ### 1. Clone the repository
 
 ```bash
@@ -131,23 +148,32 @@ This installs both frontend and backend packages in one command.
 
 ### 3. Configure environment
 
-Create `backend/config/config.env` with:
+Copy the example config and fill in **your own** values:
 
-```env
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/medihelp
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRE=7d
-
-# Email notifications (optional)
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password
-
-# Twilio SMS (optional)
-TWILIO_ACCOUNT_SID=your_sid
-TWILIO_AUTH_TOKEN=your_token
-TWILIO_PHONE_NUMBER=+1234567890
+```bash
+cp backend/config/config.env.example backend/config/config.env
 ```
+
+Then generate a **unique JWT secret** (every developer must have their own):
+
+```bash
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+Paste the output into `backend/config/config.env` as your `JWT_SECRET`.
+
+> **What goes where?**
+>
+> | Variable | Who sets it | Notes |
+> |---|---|---|
+> | `PORT` | Each user | Default `5000`, change if port is busy |
+> | `MONGO_URI` | Each user | Your own local or Atlas MongoDB URI |
+> | `JWT_SECRET` | **Each user (unique!)** | Generate with the command above — never share |
+> | `JWT_EXPIRE` | Each user | Token lifetime, e.g. `30d` |
+> | `EMAIL_USER` / `EMAIL_PASS` | Each user (optional) | Your Gmail + [App Password](https://myaccount.google.com/apppasswords) |
+> | `TWILIO_*` | Each user (optional) | Your own [Twilio](https://www.twilio.com/) credentials |
+>
+> `config.env` is gitignored — it never gets committed. Only `config.env.example` (the template) is in the repo.
 
 ### 4. Seed sample data (optional)
 
@@ -276,3 +302,4 @@ This project is licensed under the MIT License.
   <br /><br />
   For queries, open an issue or contact: <a href="mailto:bnshekokar@gmail.com">bnshekokar@gmail.com</a>
 </p>
+

@@ -1,2 +1,20 @@
 node_modules
 backend/node_modules
+
+# Environment secrets — never commit these
+backend/config/config.env
+.env
+.env.local
+.env.*.local
+
+# Uploaded files
+backend/uploads/avatars/*
+!backend/uploads/avatars/.gitkeep
+
+# Build output
+build/
+
+# IDE / OS
+.DS_Store
+.vscode/
+*.swp

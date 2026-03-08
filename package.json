@@ -11,7 +11,8 @@
     "server": "cd backend && node server.js",
     "server:dev": "cd backend && nodemon server.js --config nodemon.json",
     "dev": "concurrently \"npm run server:dev\" \"npm start\"",
-    "install-all": "npm install && cd backend && npm install"
+    "install-all": "npm install && cd backend && npm install",
+    "setup": "node scripts/setup.js"
   },
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
