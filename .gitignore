@@ -6,6 +6,7 @@ backend/config/config.env
 .env
 .env.local
 .env.*.local
+oauth_cred.json
 
 # Uploaded files
 backend/uploads/avatars/*

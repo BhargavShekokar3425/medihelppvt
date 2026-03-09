@@ -158,14 +158,15 @@ const apiService = {
   },
 
   // Add these methods for SOS functionality
-  sendSosAlert: async (userId, latitude, longitude, hospitalId = null) => {
+  sendSosAlert: async (userId, latitude, longitude, emergencyType = 'medical', description = '', hospitalIds = []) => {
     try {
       const response = await axiosInstance.post('/emergency/sos', {
         userId,
-        location: { latitude, longitude, accuracy: 10 },
-        hospitalId,
-        emergencyType: 'medical',
-        description: 'Medical emergency requiring immediate assistance'
+        latitude: parseFloat(Number(latitude).toFixed(9)),
+        longitude: parseFloat(Number(longitude).toFixed(9)),
+        emergencyType,
+        description: description || 'Medical emergency requiring immediate assistance',
+        hospitalIds,
       });
       return response;
     } catch (error) {
@@ -241,40 +242,34 @@ const apiService = {
     }
   },
 
-  // Send SOS with enhanced backup systems
-  async sendSos(userId, latitude, longitude, hospitalId) {
+  // Send SOS — broadcasts to selected hospitals (or all if hospitalIds is empty)
+  async sendSos(userId, latitude, longitude, emergencyType = 'medical', description = '', hospitalIds = []) {
     try {
       const response = await this.post('/emergency/sos', {
         userId,
-        latitude,
-        longitude,
-        hospitalId,
-        timestamp: new Date().toISOString()
+        latitude: parseFloat(Number(latitude).toFixed(9)),
+        longitude: parseFloat(Number(longitude).toFixed(9)),
+        emergencyType,
+        description: description || 'Medical emergency requiring immediate assistance',
+        hospitalIds,   // empty array = send to all
+        timestamp: new Date().toISOString(),
       });
       
       return response;
     } catch (error) {
       console.error('Error sending SOS through API:', error);
       
-      // Create a fallback SOS data structure
       const sosData = {
         success: false,
         id: `local-sos-${Date.now()}`,
         message: 'SOS created locally due to server error',
         timestamp: new Date().toISOString(),
-        status: 'created'
+        status: 'created',
       };
       
-      // Store in local storage as a backup
       try {
         const existingSOS = JSON.parse(localStorage.getItem('emergency_sos') || '[]');
-        existingSOS.push({
-          userId,
-          latitude,
-          longitude,
-          hospitalId,
-          ...sosData
-        });
+        existingSOS.push({ userId, latitude, longitude, ...sosData });
         localStorage.setItem('emergency_sos', JSON.stringify(existingSOS));
       } catch (storageError) {
         console.error('Failed to store emergency data locally:', storageError);

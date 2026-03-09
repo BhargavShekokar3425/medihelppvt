@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { GoogleLogin } from '@react-oauth/google';
 import { useBackendContext } from "../contexts/BackendContext";
 import LoginHelper from '../components/LoginHelper';
 
@@ -22,9 +23,10 @@ const SignUp = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStep, setFormStep] = useState(1);
   const [success, setSuccess] = useState(false);
+  const [googleRole, setGoogleRole] = useState('patient');
   
   const navigate = useNavigate();
-  const { register, login, currentUser } = useBackendContext();
+  const { register, login, googleLogin, currentUser } = useBackendContext();
 
   // Redirect if already logged in
   useEffect(() => {
@@ -98,6 +100,64 @@ const SignUp = () => {
       setIsSubmitting(false);
     }
   };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setFormError("");
+    setIsSubmitting(true);
+    try {
+      const role = mode === "signup" ? googleRole : undefined;
+      await googleLogin(credentialResponse.credential, role);
+      navigate("/profile");
+    } catch (error) {
+      console.error("Google auth error:", error);
+      setFormError(error.message || "Google authentication failed");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setFormError("Google sign-in was cancelled or failed. Please try again.");
+  };
+
+  const renderGoogleAuth = () => (
+    <div className="mt-3">
+      <div className="d-flex align-items-center my-3">
+        <hr className="flex-grow-1" />
+        <span className="px-3 text-muted" style={{ fontSize: '0.9rem' }}>or</span>
+        <hr className="flex-grow-1" />
+      </div>
+
+      {mode === "signup" && (
+        <div className="mb-3">
+          <label className="form-label" style={{ fontSize: '0.85rem', color: '#666' }}>
+            Sign up as:
+          </label>
+          <select
+            className="form-select form-select-sm"
+            value={googleRole}
+            onChange={(e) => setGoogleRole(e.target.value)}
+          >
+            <option value="patient">Patient</option>
+            <option value="doctor">Doctor</option>
+            <option value="pharmacy">Pharmacy</option>
+          </select>
+        </div>
+      )}
+
+      <div className="d-flex justify-content-center">
+        <GoogleLogin
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+          theme="outline"
+          size="large"
+          width="100%"
+          text={mode === "login" ? "signin_with" : "signup_with"}
+          shape="rectangular"
+        />
+      </div>
+    </div>
+  );
 
   const renderSignupForm = () => {
     if (success) {
@@ -388,6 +448,8 @@ const SignUp = () => {
             {renderSignupForm()}
           </>
         )}
+
+        {renderGoogleAuth()}
 
         <p
           className="text-center mt-3"

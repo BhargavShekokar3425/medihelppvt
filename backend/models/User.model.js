@@ -4,8 +4,12 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true, select: false },
+  password: { type: String, select: false },  // Not required for Google auth users
   role: { type: String, enum: ['patient', 'doctor', 'pharmacy', 'admin'], default: 'patient' },
+
+  // Google OAuth
+  googleId: { type: String, unique: true, sparse: true },
+  authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
 
   // Profile
   phone: String,
@@ -94,10 +98,18 @@ userSchema.index({ 'clinic.location.coordinates': '2dsphere' });
 userSchema.index({ role: 1, isActive: 1 });
 userSchema.index({ 'location.city': 1, role: 1 });
 
-// Hash password before save
+// Hash password before save (skip for Google auth users)
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+// Ensure local auth users have a password
+userSchema.pre('validate', function (next) {
+  if (this.authProvider === 'local' && !this.password && this.isNew) {
+    this.invalidate('password', 'Password is required for local registration');
+  }
   next();
 });
 

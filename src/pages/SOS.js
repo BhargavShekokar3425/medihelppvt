@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useBackendContext } from '../contexts/BackendContext';
 import { motion } from 'framer-motion';
 import '../styles/SOS.css';
-import smsService from '../services/smsService'; // Import smsService
+import { io as socketIO } from 'socket.io-client';
+
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
 
 const SOS = () => {
   // Core state management
@@ -13,9 +15,16 @@ const SOS = () => {
   const [sosSent, setSosSent] = useState(false);
   const [sosStatus, setSosStatus] = useState('idle');
   const [nearbyHospitals, setNearbyHospitals] = useState([]);
-  const [selectedHospital, setSelectedHospital] = useState(null);
+  const [selectedHospital, setSelectedHospital] = useState(null);       // For map route display
+  const [selectedHospitalIds, setSelectedHospitalIds] = useState(new Set()); // Multi-select for SOS emails
+  const [selectAll, setSelectAll] = useState(true);                     // "Send to All" toggle
   const [sosId, setSosId] = useState(null);
   const [mapZoom, setMapZoom] = useState(14);
+  
+  // Email broadcast results from the server
+  const [emailStatus, setEmailStatus] = useState({ sent: 0, total: 0, results: [] });
+  // Hospital that accepted the emergency
+  const [acceptedHospital, setAcceptedHospital] = useState(null);
   
   // React refs that won't cause DOM manipulation issues
   const mapRef = useRef(null);
@@ -23,6 +32,7 @@ const SOS = () => {
   const markersRef = useRef([]);
   const directionsRendererRef = useRef(null);
   const routeInfoRef = useRef(null);
+  const socketRef = useRef(null);
 
   // Use a ref for cleanup functions to avoid recreating them
   const cleanupFunctionsRef = useRef([]);
@@ -135,6 +145,45 @@ const SOS = () => {
       if (locationWatchId !== null) {
         navigator.geolocation.clearWatch(locationWatchId);
       }
+    };
+  }, []);
+
+  // ─── Socket.io: listen for emergency acceptance & status updates ───
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const socket = socketIO(SOCKET_URL, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+    });
+    socketRef.current = socket;
+
+    // A hospital accepted our emergency
+    socket.on('emergency:accepted', (data) => {
+      console.log('[SOS] Emergency accepted:', data);
+      setAcceptedHospital(data.hospital);
+      setSosStatus('acknowledged');
+
+      // Browser notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Hospital Accepted Your Emergency!', {
+          body: `${data.hospital?.name || 'A hospital'} is dispatching help to your location.`,
+          icon: '/assets/emergency-icon.png',
+          tag: 'sos-accepted',
+        });
+      }
+    });
+
+    // Status updates (dispatched, resolved, etc.)
+    socket.on('emergency:statusUpdate', (data) => {
+      console.log('[SOS] Status update:', data);
+      setSosStatus(data.status);
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
     };
   }, []);
   
@@ -471,125 +520,42 @@ const SOS = () => {
     }
   }, [selectedHospital, updateMapMarkers, drawRouteToHospital]);
 
-  // Handle hospital selection
+  // Handle hospital selection — toggle in the multi-select set + set for map route
   const handleHospitalSelect = useCallback((hospital) => {
-    setSelectedHospital(hospital);
+    setSelectedHospital(hospital); // For map route display
   }, []);
-  
-  // Add additional state for tracking SMS status
-  const [smsStatus, setSmsStatus] = useState({ sent: false, error: null });
-  
-  // Send emergency SMS function - enhanced with better error handling
-  const sendEmergencySMS = useCallback(async (hospitalData, emergencyData) => {
-    if (!hospitalData) {
-      console.warn('No hospital data provided for SMS');
-      return { success: false, error: 'Missing hospital data' };
-    }
 
-    try {
-      setSmsStatus({ sent: false, error: null });
-      
-      // Try multiple emergency contacts if available
-      let successfulSend = false;
-      let lastError = null;
-      
-      // If hospital has emergency contacts, try them in sequence
-      if (hospitalData.emergencyContacts && hospitalData.emergencyContacts.length > 0) {
-        // Try each emergency contact until one succeeds
-        for (const contact of hospitalData.emergencyContacts) {
-          try {
-            // Clone hospital data to avoid modifying the original
-            const hospitalWithContact = { 
-              ...hospitalData,
-              emergencyContacts: [contact] // Use just this contact
-            };
-            
-            console.log(`Attempting SMS to emergency contact: ${contact}`);
-            const result = await smsService.sendEmergencyAlert(hospitalWithContact, {
-              patientName: currentUser?.name || 'Anonymous',
-              patientId: currentUser?.id || 'Unknown',
-              location: emergencyData,
-              type: 'Medical Emergency',
-              additionalInfo: 'Requires immediate assistance'
-            });
-            
-            if (result.success) {
-              successfulSend = true;
-              setSmsStatus({ sent: true, error: null });
-              console.log(`Emergency SMS sent successfully to ${contact}`);
-              return result;
-            } else {
-              lastError = result.error;
-              console.warn(`Failed to send SMS to ${contact}:`, result.error);
-            }
-          } catch (contactError) {
-            lastError = contactError.message;
-            console.warn(`Error sending SMS to ${contact}:`, contactError);
-          }
-        }
+  // Toggle a hospital in the multi-select set
+  const toggleHospitalSelection = useCallback((hospitalId) => {
+    setSelectedHospitalIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(hospitalId)) {
+        next.delete(hospitalId);
       } else {
-        // No emergency contacts, try with the hospital's main contact
-        const result = await smsService.sendEmergencyAlert(hospitalData, {
-          patientName: currentUser?.name || 'Anonymous',
-          patientId: currentUser?.id || 'Unknown',
-          location: emergencyData,
-          type: 'Medical Emergency',
-          additionalInfo: 'Requires immediate assistance'
-        });
-        
-        if (result.success) {
-          successfulSend = true;
-          setSmsStatus({ sent: true, error: null });
-          return result;
-        } else {
-          lastError = result.error;
-        }
+        next.add(hospitalId);
       }
-      
-      // If we tried all contacts but none succeeded
-      if (!successfulSend) {
-        setSmsStatus({ 
-          sent: false, 
-          error: `Could not reach emergency contacts: ${lastError || 'Unknown error'}` 
-        });
-        return { success: false, error: lastError || 'All SMS attempts failed' };
-      }
-      
-      return { success: false, error: 'No SMS sent' };
-    } catch (error) {
-      console.error('Error in sendEmergencySMS:', error);
-      setSmsStatus({ 
-        sent: false, 
-        error: error.message || 'Unknown error occurred' 
-      });
-      return { success: false, error: error.message };
-    }
-  }, [currentUser]);
+      // If user manually deselected one, turn off "Select All"
+      setSelectAll(false);
+      return next;
+    });
+  }, []);
 
-  // Add the missing testSmsService function
-  const testSmsService = useCallback(async () => {
-    if (!selectedHospital) {
-      setError('Please select a hospital first');
-      return;
+  // Handle "Select All" toggle
+  const handleSelectAll = useCallback((checked) => {
+    setSelectAll(checked);
+    if (checked) {
+      setSelectedHospitalIds(new Set(nearbyHospitals.map((h) => h.id)));
+    } else {
+      setSelectedHospitalIds(new Set());
     }
-    
-    try {
-      setLoading(true);
-      const result = await smsService.sendTestSMS(selectedHospital.contact);
-      
-      if (result.success) {
-        setError(null);
-        alert('Test SMS sent successfully to ' + selectedHospital.contact);
-      } else {
-        setError('Failed to send test SMS: ' + result.error);
-      }
-    } catch (err) {
-      console.error('Error testing SMS service:', err);
-      setError('Error in SMS test: ' + err.message);
-    } finally {
-      setLoading(false);
+  }, [nearbyHospitals]);
+
+  // When hospitals list populates, auto-select all by default
+  useEffect(() => {
+    if (nearbyHospitals.length > 0 && selectAll) {
+      setSelectedHospitalIds(new Set(nearbyHospitals.map((h) => h.id)));
     }
-  }, [selectedHospital]);
+  }, [nearbyHospitals, selectAll]);
 
   // Handle sending SOS alert with improved error handling
   const handleSosButtonClick = useCallback(async () => {
@@ -602,63 +568,51 @@ const SOS = () => {
       setError('Location not available. Please enable location services.');
       return;
     }
-    
-    if (!selectedHospital) {
-      setError('Please select a hospital first.');
+
+    if (selectedHospitalIds.size === 0) {
+      setError('Please select at least one hospital to send the SOS to.');
       return;
+    }
+
+    // Request browser notification permission proactively
+    if ('Notification' in window && Notification.permission === 'default') {
+      await Notification.requestPermission();
     }
 
     setLoading(true);
     setSosStatus('sending');
-    let serverSosSuccess = false;
-    let smsSosSuccess = false;
 
     try {
-      // Send SOS to the server
-      try {
-        const response = await apiService.sendSos(
-          currentUser.id, 
-          location.latitude, 
-          location.longitude,
-          selectedHospital.id
-        );
-        
-        if (response.success) {
-          setSosId(response.id);
-          serverSosSuccess = true;
-        }
-      } catch (serverError) {
-        console.error('Server SOS error:', serverError);
-        // Continue to SMS attempt even if server fails
-      }
-      
-      // Send emergency SMS as a backup/parallel notification
-      try {
-        const smsResult = await sendEmergencySMS(selectedHospital, {
-          latitude: location.latitude,
-          longitude: location.longitude
-        });
-        
-        smsSosSuccess = smsResult.success;
-      } catch (smsError) {
-        console.error('SMS sending error:', smsError);
-        // Continue processing regardless of SMS failure
-      }
+      // Send SOS — pass selected hospital IDs (or empty for all)
+      const response = await apiService.sendSos(
+        currentUser.id,
+        location.latitude,
+        location.longitude,
+        'medical',
+        'Medical emergency requiring immediate assistance',
+        selectAll ? [] : [...selectedHospitalIds]  // empty = all, otherwise specific IDs
+      );
 
-      // Handle the combined result
-      if (serverSosSuccess || smsSosSuccess) {
+      if (response.success) {
+        setSosId(response.id);
         setSosSent(true);
         setSosStatus('sent');
-        
-        // Show notification if supported
+        setEmailStatus({
+          sent: response.emailsSent || 0,
+          total: response.emailsTotal || 0,
+          results: response.emailResults || [],
+        });
+
+        // Browser notification
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('Emergency SOS Sent', {
-            body: `Help is on the way. ${smsSosSuccess ? 'Emergency contacts have been notified.' : ''} Stay calm and wait for assistance.`,
-            icon: '/assets/emergency-icon.png'
+            body: `Alert sent to ${response.emailsSent || 0} hospital contact(s). Waiting for acceptance...`,
+            icon: '/assets/emergency-icon.png',
+            tag: 'sos-sent',
           });
         }
       } else {
-        throw new Error('Failed to send SOS through all channels');
+        throw new Error(response.message || 'Failed to send SOS');
       }
     } catch (error) {
       console.error('Error sending SOS:', error);
@@ -667,7 +621,7 @@ const SOS = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUser, location, selectedHospital, apiService, sendEmergencySMS]);
+  }, [currentUser, location, apiService, selectedHospitalIds, selectAll]);
   
   // Handle SOS cancellation
   const cancelSOS = useCallback(async () => {
@@ -704,7 +658,7 @@ const SOS = () => {
       <button
         className={`sos-button ${sosStatus !== 'idle' ? 'active' : ''}`}
         onClick={handleSosButtonClick}
-        disabled={loading || sosSent || !location}
+        disabled={loading || sosSent || !location || selectedHospitalIds.size === 0}
       >
         {loading ? (
           <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -715,16 +669,26 @@ const SOS = () => {
           </>
         )}
       </button>
-      <p className="sos-description">Press in case of medical emergency</p>
+      <p className="sos-description">
+        {selectedHospitalIds.size === 0
+          ? 'Select at least one hospital below'
+          : selectAll
+            ? 'SOS will be sent to all hospitals'
+            : `SOS will be sent to ${selectedHospitalIds.size} hospital(s)`}
+      </p>
     </motion.div>
   );
   
-  // Render SOS status message with enhanced feedback
+  // Render SOS status message with email broadcast + acceptance feedback
   const renderSOSStatus = () => {
     const statusMessages = {
-      sending: 'Sending SOS alert...',
-      sent: 'SOS alert sent! Help is on the way.',
-      acknowledged: 'Emergency services have acknowledged your SOS.',
+      sending: selectAll
+        ? 'Sending SOS alert to all hospitals...'
+        : `Sending SOS alert to ${selectedHospitalIds.size} selected hospital(s)...`,
+      sent: `SOS alert sent! ${emailStatus.sent}/${emailStatus.total} email(s) delivered. Waiting for acceptance...`,
+      acknowledged: acceptedHospital
+        ? `${acceptedHospital.name} has accepted your emergency!`
+        : 'A hospital has acknowledged your SOS.',
       dispatched: 'Emergency responders have been dispatched to your location.',
       resolved: 'Emergency has been marked as resolved.',
       cancelled: 'SOS alert has been cancelled.',
@@ -751,27 +715,55 @@ const SOS = () => {
       failed: 'text-danger'
     };
     
-    // Add SMS status information
-    const renderSMSStatus = () => {
-      if (!smsStatus.sent && !smsStatus.error) return null;
-      
-      if (smsStatus.sent) {
-        return (
-          <div className="mt-2 small text-success">
-            <i className="fas fa-check-circle me-1"></i>
-            Emergency contacts notified via SMS
+    // Email broadcast status
+    const renderEmailStatus = () => {
+      if (emailStatus.total === 0) return null;
+
+      return (
+        <div className="mt-2 p-2" style={{ background: '#f8f9fa', borderRadius: '6px' }}>
+          <div className="small fw-bold mb-1">
+            <i className="fas fa-envelope me-1"></i>
+            Email Notifications: {emailStatus.sent}/{emailStatus.total} delivered
           </div>
-        );
-      } else if (smsStatus.error) {
-        return (
-          <div className="mt-2 small text-warning">
-            <i className="fas fa-exclamation-triangle me-1"></i>
-            SMS notification failed: {smsStatus.error}
-          </div>
-        );
-      }
-      
-      return null;
+          {emailStatus.results.map((r, i) => (
+            <div key={i} className={`small ${r.sent ? 'text-success' : 'text-danger'}`}>
+              <i className={`fas ${r.sent ? 'fa-check' : 'fa-times'} me-1`}></i>
+              {r.email} {r.sent ? '— Sent' : `— Failed: ${r.error || 'unknown'}`}
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    // Accepted hospital details
+    const renderAcceptedHospital = () => {
+      if (!acceptedHospital) return null;
+
+      return (
+        <motion.div
+          className="mt-3 p-3 border border-success rounded"
+          style={{ background: '#e8f5e9' }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <h6 className="text-success mb-2">
+            <i className="fas fa-hospital me-1"></i>
+            {acceptedHospital.name}
+          </h6>
+          {acceptedHospital.contact && (
+            <p className="mb-1 small">
+              <i className="fas fa-phone me-1"></i>
+              <a href={`tel:${acceptedHospital.contact}`}>{acceptedHospital.contact}</a>
+            </p>
+          )}
+          {acceptedHospital.email && (
+            <p className="mb-0 small">
+              <i className="fas fa-envelope me-1"></i> {acceptedHospital.email}
+            </p>
+          )}
+        </motion.div>
+      );
     };
     
     if (sosStatus === 'idle') return null;
@@ -786,11 +778,12 @@ const SOS = () => {
         <i className={`fas ${statusIcons[sosStatus] || 'fa-info-circle'} me-2`}></i>
         {statusMessages[sosStatus] || 'Processing your emergency request.'}
         
-        {renderSMSStatus()}
+        {renderEmailStatus()}
+        {renderAcceptedHospital()}
         
         {(sosStatus === 'sent' || sosStatus === 'acknowledged' || sosStatus === 'dispatched') && (
           <button 
-            className="btn btn-sm btn-outline-danger float-end"
+            className="btn btn-sm btn-outline-danger float-end mt-2"
             onClick={cancelSOS}
             disabled={loading}
           >
@@ -801,7 +794,7 @@ const SOS = () => {
     );
   };
   
-  // Render hospital selection list
+  // Render hospital selection list with multi-select + "Select All"
   const renderHospitalSelector = () => {
     if (loading && !nearbyHospitals.length) {
       return (
@@ -818,43 +811,80 @@ const SOS = () => {
     
     return (
       <div className="hospital-selector mt-4">
-        <h5>Nearby Medical Facilities</h5>
-        <div className="hospital-list">
-          {nearbyHospitals.map(hospital => (
-            <motion.div 
-              key={hospital.id}
-              className={`hospital-card ${selectedHospital?.id === hospital.id ? 'selected' : ''}`}
-              onClick={() => handleHospitalSelect(hospital)}
-              whileHover={{ scale: 1.03 }}
-              transition={{ duration: 0.2 }}
-            >
-              <h6>{hospital.name}</h6>
-              <p className="mb-1"><i className="fas fa-map-marker-alt me-1"></i> {hospital.distance}</p>
-              <p className="mb-0"><i className="fas fa-phone me-1"></i> {hospital.contact}</p>
-              {hospital.type && (
-                <span className={`badge bg-${
-                  hospital.type === 'primary' ? 'success' : 
-                  hospital.type === 'secondary' ? 'info' : 'warning'
-                } mt-2`}>
-                  {hospital.type.charAt(0).toUpperCase() + hospital.type.slice(1)} Care
-                </span>
-              )}
-            </motion.div>
-          ))}
-        </div>
-        
-        {/* Add SMS test button for development */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-3 text-end">
-            <button
-              className="btn btn-sm btn-outline-secondary"
-              onClick={testSmsService}
-              disabled={!selectedHospital || loading}
-            >
-              <i className="fas fa-sms me-1"></i> Test SMS
-            </button>
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <h5 className="mb-0">Nearby Medical Facilities</h5>
+          <div className="form-check form-switch">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              id="selectAllHospitals"
+              checked={selectAll}
+              onChange={(e) => handleSelectAll(e.target.checked)}
+            />
+            <label className="form-check-label small fw-bold" htmlFor="selectAllHospitals">
+              Send to All
+            </label>
           </div>
-        )}
+        </div>
+
+        <p className="text-muted small mb-2">
+          <i className="fas fa-info-circle me-1"></i>
+          {selectAll
+            ? 'SOS will be sent to all hospitals below.'
+            : `${selectedHospitalIds.size} hospital(s) selected — click checkboxes to choose.`}
+        </p>
+
+        <div className="hospital-list">
+          {nearbyHospitals.map(hospital => {
+            const isChecked = selectAll || selectedHospitalIds.has(hospital.id);
+            const isRouteTarget = selectedHospital?.id === hospital.id;
+
+            return (
+              <motion.div 
+                key={hospital.id}
+                className={`hospital-card ${isRouteTarget ? 'selected' : ''} ${isChecked ? 'checked' : 'unchecked'}`}
+                style={{
+                  opacity: isChecked ? 1 : 0.55,
+                  borderLeft: isChecked ? '4px solid #2e7d32' : '4px solid #ccc',
+                }}
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.15 }}
+              >
+                <div className="d-flex align-items-start">
+                  {/* Checkbox for email selection */}
+                  <div className="form-check me-2 mt-1" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleHospitalSelection(hospital.id)}
+                      id={`hosp-${hospital.id}`}
+                      disabled={selectAll}
+                    />
+                  </div>
+
+                  {/* Hospital info — clicking this selects for map route */}
+                  <div className="flex-grow-1" onClick={() => handleHospitalSelect(hospital)} style={{ cursor: 'pointer' }}>
+                    <h6 className="mb-1">{hospital.name}</h6>
+                    <p className="mb-1 small"><i className="fas fa-map-marker-alt me-1"></i> {hospital.distance}</p>
+                    <p className="mb-1 small"><i className="fas fa-phone me-1"></i> {hospital.contact}</p>
+                    {hospital.email && (
+                      <p className="mb-0 small text-muted"><i className="fas fa-envelope me-1"></i> {hospital.email}</p>
+                    )}
+                    {hospital.type && (
+                      <span className={`badge bg-${
+                        hospital.type === 'primary' ? 'success' : 
+                        hospital.type === 'secondary' ? 'info' : 'warning'
+                      } mt-1`}>
+                        {hospital.type.charAt(0).toUpperCase() + hospital.type.slice(1)} Care
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -876,10 +906,13 @@ const SOS = () => {
           <i className="fas fa-map-marker-alt pulse"></i>
         </div>
         <p>
-          <strong>Your coordinates:</strong> {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+          <strong>Your coordinates:</strong>{' '}
+          <code style={{ fontSize: '13px' }}>
+            {location.latitude.toFixed(9)}, {location.longitude.toFixed(9)}
+          </code>
         </p>
         <p className="text-muted">
-          <small>These coordinates will be shared with emergency services</small>
+          <small>Full precision coordinates will be shared with all hospitals</small>
         </p>
       </div>
     );

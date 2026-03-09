@@ -103,6 +103,32 @@ export const useBackendState = () => {
       setLoading(false);
     }
   };
+
+  const googleLogin = async (credential, role) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log("Attempting Google login...");
+      const response = await apiService.post('/auth/google', { credential, role });
+
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setCurrentUser(response.user);
+        console.log("Google login successful for:", response.user.email);
+      }
+
+      return response.user;
+    } catch (err) {
+      const errorMsg = err.message || "Google login failed";
+      console.error("Google login error:", errorMsg);
+      setError(errorMsg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const logout = () => {
     console.log("Logging out user:", currentUser?.email);
@@ -147,6 +173,7 @@ export const useBackendState = () => {
     error,
     login,
     register,
+    googleLogin,
     logout,
     updateProfile,
     apiService

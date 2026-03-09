@@ -78,6 +78,78 @@ io.on('connection', (socket) => {
     socket.join(`conv:${conversationId}`);
   });
 
+  // ─── Emergency / SOS events ───
+  // Hospital staff join a room to receive emergency broadcasts
+  socket.on('emergency:subscribe', () => {
+    socket.join('emergency:hospitals');
+    console.log(`Socket ${userId} subscribed to emergency broadcasts`);
+  });
+
+  // Hospital accepts an emergency via Socket (alternative to email link)
+  socket.on('emergency:accept', async ({ emergencyId, hospitalId }) => {
+    try {
+      const EmergencyRequest = require('./models/EmergencyRequest.model');
+      const Hospital = require('./models/Hospital.model');
+
+      const updated = await EmergencyRequest.findOneAndUpdate(
+        { _id: emergencyId, acceptedBy: { $exists: false } },
+        {
+          $set: {
+            acceptedBy: hospitalId,
+            acceptedAt: new Date(),
+            hospital: hospitalId,
+            status: 'acknowledged',
+          },
+        },
+        { new: true }
+      );
+
+      if (!updated) {
+        socket.emit('emergency:acceptResult', {
+          success: false,
+          emergencyId,
+          message: 'Already accepted by another hospital.',
+        });
+        return;
+      }
+
+      const hospital = await Hospital.findById(hospitalId);
+
+      // Notify the patient
+      io.to(`user:${updated.user.toString()}`).emit('emergency:accepted', {
+        emergencyId,
+        hospital: {
+          id: hospital?._id,
+          name: hospital?.name,
+          contact: hospital?.contact,
+          email: hospital?.email,
+        },
+        acceptedAt: updated.acceptedAt,
+      });
+
+      // Notify all hospitals that this one is claimed
+      io.emit('emergency:claimed', {
+        emergencyId,
+        acceptedBy: hospital?.name || hospitalId,
+      });
+
+      socket.emit('emergency:acceptResult', {
+        success: true,
+        emergencyId,
+        message: 'Emergency accepted successfully.',
+      });
+
+      console.log(`[Socket] Emergency ${emergencyId} accepted by ${hospital?.name}`);
+    } catch (err) {
+      console.error('[Socket] emergency:accept error:', err);
+      socket.emit('emergency:acceptResult', {
+        success: false,
+        emergencyId,
+        message: err.message,
+      });
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${userId}`);
     const sockets = onlineUsers.get(userId);

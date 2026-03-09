@@ -6,14 +6,27 @@ const emergencyRequestSchema = new mongoose.Schema({
     latitude: { type: Number, required: true },
     longitude: { type: Number, required: true },
   },
+  // The hospital that accepted (first-to-accept wins)
   hospital: { type: mongoose.Schema.Types.ObjectId, ref: 'Hospital' },
+  // All hospitals that were notified
+  notifiedHospitals: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Hospital' }],
+  // Track which hospitals were emailed successfully
+  emailResults: [{
+    hospital: { type: mongoose.Schema.Types.ObjectId, ref: 'Hospital' },
+    email: String,
+    sent: Boolean,
+    error: String,
+    sentAt: Date,
+  }],
   status: {
     type: String,
-    enum: ['created', 'acknowledged', 'dispatched', 'resolved', 'cancelled'],
+    enum: ['created', 'notified', 'acknowledged', 'dispatched', 'resolved', 'cancelled'],
     default: 'created',
   },
   emergencyType: { type: String, enum: ['medical', 'accident', 'other'], default: 'medical' },
   description: String,
+  acceptedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Hospital' }, // First hospital to accept
+  acceptedAt: Date,
   resolvedAt: Date,
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
