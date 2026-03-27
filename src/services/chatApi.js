@@ -67,9 +67,11 @@ export const chatApi = {
     });
   },
 
-  // Message endpoints
-  getMessages: async (conversationId) => {
-    return apiFetch(`/chat/conversations/${conversationId}/messages`);
+  // Message endpoints (with pagination support)
+  getMessages: async (conversationId, { limit = 50, before = null } = {}) => {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    if (before) params.append('before', before);
+    return apiFetch(`/chat/conversations/${conversationId}/messages?${params}`);
   },
 
   sendMessage: async (conversationId, body) => {
@@ -79,8 +81,17 @@ export const chatApi = {
     });
   },
 
+  // Mark messages as read/delivered
   markAsRead: async (messageId) => {
     return apiFetch(`/chat/messages/${messageId}/read`, { method: 'PUT' });
+  },
+
+  markConversationAsDelivered: async (conversationId) => {
+    return apiFetch(`/chat/conversations/${conversationId}/delivered`, { method: 'PUT' });
+  },
+
+  markConversationAsRead: async (conversationId) => {
+    return apiFetch(`/chat/conversations/${conversationId}/read`, { method: 'PUT' });
   },
 };
 

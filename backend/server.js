@@ -78,6 +78,109 @@ io.on('connection', (socket) => {
     socket.join(`conv:${conversationId}`);
   });
 
+  // ─── Message Delivery/Read Receipt Events ───
+  // Auto-mark messages as delivered when user connects
+  const markPendingAsDelivered = async () => {
+    try {
+      const Message = require('./models/Message.model');
+      const Conversation = require('./models/Conversation.model');
+
+      // Find all conversations for this user
+      const conversations = await Conversation.find({ participants: userId });
+      const conversationIds = conversations.map((c) => c._id);
+
+      // Mark undelivered messages as delivered
+      const result = await Message.updateMany(
+        {
+          conversation: { $in: conversationIds },
+          sender: { $ne: userId },
+          deliveredTo: { $nin: [userId] },
+        },
+        { $addToSet: { deliveredTo: userId } }
+      );
+
+      if (result.modifiedCount > 0) {
+        // Get unique senders to notify
+        const messages = await Message.find({
+          conversation: { $in: conversationIds },
+          sender: { $ne: userId },
+        }).distinct('sender');
+
+        // Notify each sender that their messages were delivered
+        messages.forEach((senderId) => {
+          io.to(`user:${senderId.toString()}`).emit('messages:delivered', {
+            deliveredTo: userId,
+          });
+        });
+      }
+    } catch (err) {
+      console.error('[Socket] Auto-delivery error:', err);
+    }
+  };
+  markPendingAsDelivered();
+
+  // Handle individual message delivered confirmations
+  socket.on('message:delivered', async ({ conversationId, messageIds }) => {
+    try {
+      const Message = require('./models/Message.model');
+
+      await Message.updateMany(
+        {
+          _id: { $in: messageIds },
+          deliveredTo: { $nin: [userId] },
+        },
+        { $addToSet: { deliveredTo: userId } }
+      );
+
+      // Notify senders their messages were delivered
+      const messages = await Message.find({ _id: { $in: messageIds } });
+      const senderIds = [...new Set(messages.map((m) => m.sender.toString()))];
+
+      senderIds.forEach((senderId) => {
+        if (senderId !== userId) {
+          io.to(`user:${senderId}`).emit('message:delivered', {
+            conversationId,
+            messageIds,
+            deliveredTo: userId,
+          });
+        }
+      });
+    } catch (err) {
+      console.error('[Socket] message:delivered error:', err);
+    }
+  });
+
+  // Handle message read confirmations
+  socket.on('message:read', async ({ conversationId, messageIds }) => {
+    try {
+      const Message = require('./models/Message.model');
+
+      await Message.updateMany(
+        {
+          _id: { $in: messageIds },
+          readBy: { $nin: [userId] },
+        },
+        { $addToSet: { readBy: userId } }
+      );
+
+      // Notify senders their messages were read
+      const messages = await Message.find({ _id: { $in: messageIds } });
+      const senderIds = [...new Set(messages.map((m) => m.sender.toString()))];
+
+      senderIds.forEach((senderId) => {
+        if (senderId !== userId) {
+          io.to(`user:${senderId}`).emit('message:read', {
+            conversationId,
+            messageIds,
+            readBy: userId,
+          });
+        }
+      });
+    } catch (err) {
+      console.error('[Socket] message:read error:', err);
+    }
+  });
+
   // ─── Emergency / SOS events ───
   // Hospital staff join a room to receive emergency broadcasts
   socket.on('emergency:subscribe', () => {

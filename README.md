@@ -56,7 +56,7 @@
 | **Doctor Dashboard** | Manage schedule, view patients, handle appointment requests, configure working hours |
 | **Profile Management** | Edit personal/professional details, upload profile photo, role-specific fields |
 | **Emergency SOS** | One-tap emergency with geolocation, nearby hospital routing, email/SMS notifications |
-| **Real-time Chat** | Socket.io powered messaging between patients and doctors with unread tracking |
+| **Real-time Chat** | Socket.io messaging with WhatsApp-style read receipts (sent/delivered/read), typing indicators, online status, message pagination |
 | **Prescription Hub** | Digital prescriptions — doctors create, patients view and download |
 | **Community Forums** | Medical Q&A forums with doctor-verified answers |
 | **Reviews & Ratings** | Patients rate and review doctors; aggregated ratings on profiles |
@@ -230,9 +230,23 @@ npm run dev
 ### Chat & Messaging
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/chat/conversations` | List conversations |
-| `POST` | `/api/chat/send` | Send a message |
-| `GET` | `/api/chat/messages/:conversationId` | Get messages |
+| `GET` | `/api/chat/conversations` | List conversations with unread counts |
+| `POST` | `/api/chat/conversations` | Get or create conversation with user |
+| `GET` | `/api/chat/conversations/:id/messages` | Get messages (supports `?limit=50&before=<timestamp>` pagination) |
+| `POST` | `/api/chat/conversations/:id/messages` | Send a message |
+| `PUT` | `/api/chat/conversations/:id/read` | Mark all messages as read |
+| `PUT` | `/api/chat/conversations/:id/delivered` | Mark all messages as delivered |
+| `GET` | `/api/chat/users/:type` | Get contacts by role (doctor/patient) |
+
+#### Socket.io Events
+| Event | Direction | Description |
+|---|---|---|
+| `message:new` | Server → Client | New message received |
+| `messages:delivered` | Server → Client | Messages marked as delivered |
+| `messages:read` | Server → Client | Messages marked as read |
+| `typing:start` / `typing:stop` | Bidirectional | Typing indicators |
+| `users:online` | Server → Client | List of online user IDs |
+| `conversation:join` | Client → Server | Join conversation room |
 
 ### Other
 | Method | Endpoint | Description |

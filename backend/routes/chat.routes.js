@@ -5,7 +5,7 @@ const Message = require('../models/Message.model');
 const User = require('../models/User.model');
 const { protect } = require('../middleware/auth');
 
-// GET /api/chat/conversations – get all conversations for the current user
+// GET /api/chat/conversations – get all conversations for the current user (with unread counts)
 router.get('/conversations', protect, async (req, res, next) => {
   try {
     const conversations = await Conversation.find({ participants: req.user.id })
@@ -13,8 +13,15 @@ router.get('/conversations', protect, async (req, res, next) => {
       .populate('lastMessage')
       .sort('-lastMessageAt');
 
-    res.json(
-      conversations.map((c) => {
+    // For each conversation, count unread messages
+    const conversationsWithUnread = await Promise.all(
+      conversations.map(async (c) => {
+        const unreadCount = await Message.countDocuments({
+          conversation: c._id,
+          sender: { $ne: req.user.id }, // Not sent by current user
+          readBy: { $nin: [req.user.id] }, // Current user hasn't read it
+        });
+
         const cj = c.toJSON();
         return {
           _id: cj.id || cj._id,
@@ -34,9 +41,12 @@ router.get('/conversations', protect, async (req, res, next) => {
               }
             : null,
           updatedAt: cj.lastMessageAt || cj.updatedAt,
+          unreadCount,
         };
       })
     );
+
+    res.json(conversationsWithUnread);
   } catch (err) {
     next(err);
   }
@@ -78,9 +88,12 @@ router.post('/conversations', protect, async (req, res, next) => {
   }
 });
 
-// GET /api/chat/conversations/:id/messages – get messages in a conversation
+// GET /api/chat/conversations/:id/messages – get messages in a conversation (with pagination)
 router.get('/conversations/:id/messages', protect, async (req, res, next) => {
   try {
+    const { limit = 50, before } = req.query;
+    const parsedLimit = Math.min(parseInt(limit) || 50, 100); // Max 100 messages per request
+
     const conversation = await Conversation.findById(req.params.id);
     if (!conversation) return res.status(404).json({ success: false, message: 'Conversation not found' });
 
@@ -89,12 +102,26 @@ router.get('/conversations/:id/messages', protect, async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    const messages = await Message.find({ conversation: req.params.id })
-      .populate('sender', 'name role profileImage')
-      .sort('createdAt');
+    // Build query with cursor-based pagination
+    let query = { conversation: req.params.id };
+    if (before) {
+      query.createdAt = { $lt: new Date(before) };
+    }
 
-    res.json(
-      messages.map((m) => {
+    // Fetch one extra to detect if there are more messages
+    const messages = await Message.find(query)
+      .populate('sender', 'name role profileImage')
+      .sort({ createdAt: -1 }) // Newest first for pagination
+      .limit(parsedLimit + 1);
+
+    const hasMore = messages.length > parsedLimit;
+    if (hasMore) messages.pop(); // Remove extra message
+
+    // Reverse to get chronological order
+    const sortedMessages = messages.reverse();
+
+    res.json({
+      messages: sortedMessages.map((m) => {
         const mj = m.toJSON();
         return {
           _id: mj.id || mj._id,
@@ -105,9 +132,12 @@ router.get('/conversations/:id/messages', protect, async (req, res, next) => {
           body: mj.body,
           timestamp: mj.createdAt,
           readBy: mj.readBy.map((r) => r.toString()),
+          deliveredTo: (mj.deliveredTo || []).map((d) => d.toString()),
         };
-      })
-    );
+      }),
+      hasMore,
+      oldestTimestamp: sortedMessages[0]?.createdAt || null,
+    });
   } catch (err) {
     next(err);
   }
@@ -131,6 +161,7 @@ router.post('/conversations/:id/messages', protect, async (req, res, next) => {
       sender: req.user.id,
       body,
       readBy: [req.user.id],
+      deliveredTo: [], // Will be updated when recipient receives via socket
     });
 
     // Update conversation's lastMessage
@@ -156,6 +187,7 @@ router.post('/conversations/:id/messages', protect, async (req, res, next) => {
           body: message.body,
           timestamp: message.createdAt,
           readBy: message.readBy.map((r) => r.toString()),
+          deliveredTo: [],
         });
       });
     }
@@ -169,6 +201,7 @@ router.post('/conversations/:id/messages', protect, async (req, res, next) => {
       body: message.body,
       timestamp: message.createdAt,
       readBy: message.readBy.map((r) => r.toString()),
+      deliveredTo: [],
     });
   } catch (err) {
     next(err);
@@ -208,6 +241,88 @@ router.put('/messages/:id/read', protect, async (req, res, next) => {
     }
 
     res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/chat/conversations/:id/delivered – mark all messages in conversation as delivered
+router.put('/conversations/:id/delivered', protect, async (req, res, next) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) return res.status(404).json({ success: false, message: 'Conversation not found' });
+
+    // Verify participant
+    if (!conversation.participants.some((p) => p.toString() === req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    // Update all messages not sent by current user to include current user in deliveredTo
+    const result = await Message.updateMany(
+      {
+        conversation: req.params.id,
+        sender: { $ne: req.user.id },
+        deliveredTo: { $nin: [req.user.id] },
+      },
+      { $addToSet: { deliveredTo: req.user.id } }
+    );
+
+    // Emit socket event to notify senders
+    const io = req.app.get('io');
+    if (io && result.modifiedCount > 0) {
+      const senderIds = conversation.participants
+        .filter((p) => p.toString() !== req.user.id)
+        .map((p) => p.toString());
+
+      senderIds.forEach((senderId) => {
+        io.to(`user:${senderId}`).emit('messages:delivered', {
+          conversationId: req.params.id,
+          deliveredTo: req.user.id,
+        });
+      });
+    }
+
+    res.json({ success: true, updatedCount: result.modifiedCount });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/chat/conversations/:id/read – mark all messages in conversation as read
+router.put('/conversations/:id/read', protect, async (req, res, next) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) return res.status(404).json({ success: false, message: 'Conversation not found' });
+
+    if (!conversation.participants.some((p) => p.toString() === req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    const result = await Message.updateMany(
+      {
+        conversation: req.params.id,
+        sender: { $ne: req.user.id },
+        readBy: { $nin: [req.user.id] },
+      },
+      { $addToSet: { readBy: req.user.id } }
+    );
+
+    // Emit socket event for read receipts
+    const io = req.app.get('io');
+    if (io && result.modifiedCount > 0) {
+      const senderIds = conversation.participants
+        .filter((p) => p.toString() !== req.user.id)
+        .map((p) => p.toString());
+
+      senderIds.forEach((senderId) => {
+        io.to(`user:${senderId}`).emit('messages:read', {
+          conversationId: req.params.id,
+          readBy: req.user.id,
+        });
+      });
+    }
+
+    res.json({ success: true, updatedCount: result.modifiedCount });
   } catch (err) {
     next(err);
   }

@@ -6,6 +6,7 @@ const messageSchema = new mongoose.Schema(
     sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     body: { type: String, required: true }, // Use "body" to match frontend expectations
     readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    deliveredTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Track message delivery for read receipts
   },
   {
     timestamps: true,
