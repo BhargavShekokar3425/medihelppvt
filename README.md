@@ -21,7 +21,7 @@
 ## Preview
 
 <p align="center">
-  <img src="docs/screenshots/landing.png" alt="Landing Page" width="100%" style="border-radius: 12px;" />
+  <img src="docs/screenshots/about.png" alt="Landing Page" width="100%" style="border-radius: 12px;" />
   <br />
   <em>Landing Page — Clean, modern hero with quick navigation</em>
 </p>
@@ -30,19 +30,21 @@
 <summary><b>More Screenshots</b> (click to expand)</summary>
 <br />
 
-| Sign Up | Login |
+| Sign Up | Appointments |
 |:---:|:---:|
-| ![Sign Up](docs/screenshots/signup.png) | ![Login](docs/screenshots/login.png) |
+| ![Sign Up](docs/screenshots/signup.png) | ![appointment](docs/screenshots/appointment.png) |
 
-| About | Help Center |
+| Community forum | doc-answers |
 |:---:|:---:|
-| ![About](docs/screenshots/about.png) | ![Help](docs/screenshots/help.png) |
+| ![Community-forum](docs/screenshots/community-forum.png) | ![doc-answers](docs/screenshots/doc-answers.png) |
 
-<p align="center">
-  <img src="docs/screenshots/landing-full.png" alt="Full Landing Page" width="70%" />
-  <br />
-  <em>Full Landing Page</em>
-</p>
+| doc-requests | doctors-page |
+|:---:|:---:|
+| ![doc-requests](docs/screenshots/doc-requests.png) | ![doctors-page](docs/screenshots/doctors-page.png) |
+
+| medicine-request | prescription-hub |
+|:---:|:---:|
+| ![medicine-request](docs/screenshots/medicine-request.png) | ![prescription-hub](docs/screenshots/prescription-hub.png) |
 
 </details>
 
@@ -119,6 +121,424 @@ medihelppvt/
 │
 ├── public/                 # Static assets
 └── docs/                   # Documentation & screenshots
+```
+
+---
+
+## System Diagrams (UML)
+
+> **Note:** These diagrams are rendered dynamically by GitHub using Mermaid. If they don't render, view the raw markdown or use a Mermaid-compatible viewer.
+
+### System Architecture (Component Diagram)
+
+```mermaid
+flowchart TB
+    subgraph Client["🖥️ Client (Browser)"]
+        React["React 18 SPA"]
+        SocketClient["Socket.io Client"]
+        Context["Context API\n(Auth, Backend)"]
+    end
+
+    subgraph Server["⚙️ Backend Server"]
+        Express["Express.js API"]
+        SocketServer["Socket.io Server"]
+        Auth["JWT Auth\nMiddleware"]
+        Controllers["Controllers"]
+        Services["Services\n(PDF, Email)"]
+    end
+
+    subgraph Database["🗄️ MongoDB"]
+        Users[(Users)]
+        Appointments[(Appointments)]
+        Prescriptions[(Prescriptions)]
+        AccessRequests[(Access Requests)]
+        Messages[(Messages)]
+    end
+
+    subgraph External["🌐 External Services"]
+        Gmail["Gmail SMTP"]
+        Twilio["Twilio SMS"]
+        GoogleOAuth["Google OAuth"]
+    end
+
+    React --> Express
+    SocketClient <--> SocketServer
+    Context --> React
+    Express --> Auth
+    Auth --> Controllers
+    Controllers --> Services
+    Controllers --> Database
+    Services --> Gmail
+    Services --> Twilio
+    Express --> GoogleOAuth
+```
+
+### User Authentication Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as 👤 User
+    participant R as ⚛️ React App
+    participant A as 🔐 Auth API
+    participant DB as 🗄️ MongoDB
+    participant J as 🎫 JWT
+
+    U->>R: Enter credentials
+    R->>A: POST /api/auth/login
+    A->>DB: Find user by email
+    DB-->>A: User document
+    A->>A: Verify password (bcrypt)
+    alt Password Valid
+        A->>J: Generate JWT token
+        J-->>A: Signed token
+        A-->>R: {token, user}
+        R->>R: Store in localStorage
+        R->>R: Update AuthContext
+        R-->>U: Redirect to Dashboard
+    else Password Invalid
+        A-->>R: 401 Unauthorized
+        R-->>U: Show error message
+    end
+```
+
+### Prescription Creation Flow (Doctor)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant D as 👨‍⚕️ Doctor
+    participant R as ⚛️ PresDoctors
+    participant API as 🔌 API
+    participant DB as 🗄️ MongoDB
+    participant PDF as 📄 PDF Service
+
+    D->>R: Select patient from list
+    R->>API: GET /api/users/patients
+    API->>DB: Query patients
+    DB-->>API: Patient list
+    API-->>R: Patients data
+    R->>R: Auto-fill patient info
+
+    D->>R: Fill prescription details
+    D->>R: Add medications & tests
+    D->>R: Submit prescription
+
+    R->>API: POST /api/prescriptions
+    API->>DB: Save prescription
+    DB-->>API: Prescription saved
+    API->>PDF: Generate PDF
+    PDF-->>API: PDF buffer
+    API-->>R: {prescription, pdfUrl}
+    R-->>D: Success + Rx Number
+```
+
+### Access Request Flow (Doctor ↔ Patient)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Dr as 👨‍⚕️ Doctor
+    participant DrUI as 📱 Doctor UI
+    participant API as 🔌 API
+    participant DB as 🗄️ MongoDB
+    participant PtUI as 📱 Patient UI
+    participant Pt as 👤 Patient
+
+    Dr->>DrUI: Request patient data access
+    DrUI->>API: POST /api/access-requests
+    Note over API: {patientId, requestedFields, reason}
+    API->>DB: Create AccessRequest
+    DB-->>API: Request created
+    API-->>DrUI: Request sent ✓
+
+    Note over PtUI: Patient logs in later
+    Pt->>PtUI: View notifications
+    PtUI->>API: GET /api/access-requests
+    API->>DB: Find pending requests
+    DB-->>API: Pending requests
+    API-->>PtUI: Show notification badge
+
+    Pt->>PtUI: Review request details
+    Pt->>PtUI: Approve/Deny with notes
+
+    alt Approved
+        PtUI->>API: PUT /api/access-requests/:id/respond
+        Note over API: {status: 'approved'}
+        API->>DB: Update status
+        DB-->>API: Updated
+        API-->>PtUI: Access granted ✓
+        Note over Dr: Doctor can now view fields
+    else Denied
+        PtUI->>API: PUT /api/access-requests/:id/respond
+        Note over API: {status: 'denied', patientNotes}
+        API->>DB: Update status
+        API-->>PtUI: Access denied
+    end
+```
+
+### Medicine Request Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as 👤 Patient
+    participant UI as 📱 MedicinePortal
+    participant API as 🔌 API
+    participant DB as 🗄️ MongoDB
+    participant Dr as 👨‍⚕️ Doctor
+
+    P->>UI: Choose request type
+    alt Upload Prescription
+        P->>UI: Upload prescription file
+        P->>UI: List medicines needed
+        UI->>API: POST /api/medicine-requests
+        Note over API: FormData with file
+        API->>DB: Save with file path
+    else Doctor Verification
+        P->>UI: Select doctor
+        P->>UI: List medicines needed
+        UI->>API: POST /api/medicine-requests
+        Note over API: {doctorId, medicines}
+        API->>DB: Save request
+    end
+
+    DB-->>API: Request created
+    API-->>UI: Success ✓
+    UI-->>P: Redirect to prescriptions
+
+    Note over Dr: Doctor reviews request
+    Dr->>API: GET /api/medicine-requests
+    API->>DB: Find pending requests
+    DB-->>API: Requests list
+    API-->>Dr: Show pending requests
+
+    Dr->>API: PUT /api/medicine-requests/:id/verify
+    Note over API: {status: 'approved/rejected'}
+    API->>DB: Update status
+    API-->>Dr: Verified ✓
+```
+
+### Real-time Chat Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U1 as 👤 User A
+    participant S1 as 🔌 Socket A
+    participant Server as ⚙️ Socket.io Server
+    participant S2 as 🔌 Socket B
+    participant U2 as 👤 User B
+
+    U1->>S1: Connect with JWT
+    S1->>Server: authenticate
+    Server->>Server: Verify JWT
+    Server-->>S1: Connected ✓
+
+    U1->>S1: Join conversation room
+    S1->>Server: conversation:join
+
+    U1->>S1: Send message
+    S1->>Server: message:send
+    Server->>Server: Save to MongoDB
+    Server->>S2: message:new
+    S2-->>U2: Display message (✓ sent)
+
+    Note over U2: Message delivered
+    S2->>Server: message:delivered
+    Server->>S1: messages:delivered
+    S1-->>U1: Update to (✓✓ delivered)
+
+    Note over U2: User reads message
+    S2->>Server: message:read
+    Server->>S1: messages:read
+    S1-->>U1: Update to (✓✓ blue - read)
+```
+
+### Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    USER ||--o{ APPOINTMENT : books
+    USER ||--o{ PRESCRIPTION : receives
+    USER ||--o{ ACCESS_REQUEST : sends
+    USER ||--o{ ACCESS_REQUEST : receives
+    USER ||--o{ MEDICINE_REQUEST : creates
+    USER ||--o{ MESSAGE : sends
+    USER ||--o{ REVIEW : writes
+
+    USER {
+        ObjectId _id PK
+        string name
+        string email UK
+        string password
+        enum role "patient|doctor"
+        string phone
+        string specialization
+        array allergies
+        array medicalConditions
+        object location
+    }
+
+    APPOINTMENT {
+        ObjectId _id PK
+        ObjectId patient FK
+        ObjectId doctor FK
+        date date
+        string timeSlot
+        enum status "pending|confirmed|cancelled"
+        string reason
+    }
+
+    PRESCRIPTION {
+        ObjectId _id PK
+        ObjectId patient FK
+        ObjectId doctor FK
+        string prescriptionNumber UK
+        string diagnosis
+        array medications
+        array tests
+        string notes
+        enum status "active|filled|expired"
+    }
+
+    ACCESS_REQUEST {
+        ObjectId _id PK
+        ObjectId doctor FK
+        ObjectId patient FK
+        array requestedFields
+        string reason
+        enum status "pending|approved|denied"
+        string patientNotes
+    }
+
+    MEDICINE_REQUEST {
+        ObjectId _id PK
+        ObjectId patient FK
+        ObjectId doctor FK
+        enum requestType "manual_upload|doctor_verification"
+        array medicines
+        string prescriptionFile
+        enum status "pending|approved|rejected"
+    }
+
+    MESSAGE {
+        ObjectId _id PK
+        ObjectId conversation FK
+        ObjectId sender FK
+        string content
+        enum status "sent|delivered|read"
+        datetime createdAt
+    }
+
+    REVIEW {
+        ObjectId _id PK
+        ObjectId patient FK
+        ObjectId doctor FK
+        number rating
+        string comment
+        datetime createdAt
+    }
+```
+
+### Appointment State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending: Patient books slot
+
+    Pending --> Confirmed: Doctor confirms
+    Pending --> Cancelled: Patient/Doctor cancels
+    Pending --> Expired: Time passes
+
+    Confirmed --> Completed: Appointment done
+    Confirmed --> Cancelled: Either party cancels
+    Confirmed --> NoShow: Patient doesn't show
+
+    Completed --> [*]
+    Cancelled --> [*]
+    NoShow --> [*]
+    Expired --> [*]
+
+    note right of Pending
+        Doctor receives notification
+        Can accept or reject
+    end note
+
+    note right of Confirmed
+        Both parties notified
+        Reminder sent 1 day before
+    end note
+```
+
+### Access Request State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending: Doctor sends request
+
+    Pending --> Approved: Patient approves
+    Pending --> Denied: Patient denies
+    Pending --> Expired: No response (30 days)
+
+    Approved --> Revoked: Patient revokes access
+
+    Revoked --> [*]
+    Denied --> [*]
+    Expired --> [*]
+
+    note right of Pending
+        Patient sees notification
+        Can review requested fields
+    end note
+
+    note right of Approved
+        Doctor can view
+        specified fields only
+    end note
+```
+
+### Role-Based Page Access
+
+```mermaid
+flowchart TD
+    subgraph Entry["🚪 Page Entry"]
+        User["User visits page"]
+    end
+
+    subgraph Check["🔍 Role Check"]
+        GetRole["Get currentUser.role"]
+        IsDoctor{"role === 'doctor'?"}
+        IsPatient{"role === 'patient'?"}
+    end
+
+    subgraph DoctorPages["👨‍⚕️ Doctor Pages"]
+        PresDoctors["PresDoctors.js\nCreate Prescriptions"]
+        PatientDir["PatientDirectory.js\nBrowse Patients"]
+    end
+
+    subgraph PatientPages["👤 Patient Pages"]
+        PresPatients["PresPatients.js\nView Prescriptions"]
+        MedicineReq["MedicineRequestPortal.js\nRequest Medicines"]
+    end
+
+    subgraph Dialogs["⚠️ Role Dialogs"]
+        DoctorDialog["'You are not a patient'\nRedirect to PresDoctors"]
+        PatientDialog["'You are not a doctor'\nRedirect to PresPatients"]
+    end
+
+    User --> GetRole
+    GetRole --> IsDoctor
+
+    IsDoctor -->|Yes, visiting PresPatients| DoctorDialog
+    IsDoctor -->|Yes, visiting PresDoctors| PresDoctors
+
+    GetRole --> IsPatient
+    IsPatient -->|Yes, visiting PresDoctors| PatientDialog
+    IsPatient -->|Yes, visiting PresPatients| PresPatients
+
+    DoctorDialog -->|Click redirect| PresDoctors
+    PatientDialog -->|Click redirect| PresPatients
 ```
 
 ---
