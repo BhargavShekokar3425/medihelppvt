@@ -22,6 +22,8 @@ const prescriptionRoutes = require('./routes/prescription.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const forumRoutes = require('./routes/forum.routes');
 const chatRoutes = require('./routes/chat.routes');
+const medicineRequestRoutes = require('./routes/medicineRequest.routes');
+const accessRequestRoutes = require('./routes/accessRequest.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -293,6 +295,8 @@ app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/forum', forumRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/medicine-requests', medicineRequestRoutes);
+app.use('/api/access-requests', accessRequestRoutes);
 
 // --------------- Error Handler ---------------
 app.use(errorHandler);

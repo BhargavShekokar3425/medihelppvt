@@ -1,8 +1,9 @@
 {
   "name": "medihelppvt",
-  "version": "1.0.0",
-  "description": "Medical help application with frontend and backend",
+  "version": "1.1.0",
+  "description": "Medical help application with frontend and backend - featuring prescriptions, access requests, and role-based access control",
   "private": true,
+  "proxy": "http://localhost:5000",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
@@ -15,17 +16,18 @@
     "setup": "node scripts/setup.js"
   },
   "dependencies": {
-    "@react-oauth/google": "^0.13.4",
+    "@react-oauth/google": "^0.12.1",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
-    "@testing-library/user-event": "^13.5.0",
+    "@testing-library/user-event": "^14.5.2",
     "assert": "^2.1.0",
-    "axios": "^1.8.4",
+    "axios": "^1.7.9",
     "browserify-zlib": "^0.2.0",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.1",
-    "framer-motion": "^10.17.9",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^11.18.0",
     "https-browserify": "^1.0.0",
     "nth-check": "^2.1.1",
     "postcss": "^8.5.3",
@@ -33,14 +35,14 @@
     "prop-types": "^15.8.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.4.1",
+    "react-router-dom": "^7.1.1",
     "react-scripts": "^5.0.1",
-    "socket.io-client": "^4.8.3",
+    "socket.io-client": "^4.8.1",
     "stream-browserify": "^3.0.0",
     "stream-http": "^3.2.0",
     "url": "^0.11.4",
     "util": "^0.12.5",
-    "web-vitals": "^2.1.4",
+    "web-vitals": "^4.2.4",
     "webpack-dev-middleware": "^7.4.2"
   },
   "browserslist": {
@@ -56,10 +58,16 @@
     ]
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "nodemon": "^3.0.1",
-    "puppeteer-core": "^24.38.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.3",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "nodemon": "^3.1.9",
+    "puppeteer-core": "^24.4.0",
     "react-app-rewired": "^2.2.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }

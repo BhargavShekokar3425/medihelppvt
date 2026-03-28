@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useBackendContext } from '../contexts/BackendContext';
 import About from '../components/About';
+import RequestBar from '../components/RequestBar';
 
 const HomePage = () => {
   const { currentUser } = useBackendContext();
@@ -30,6 +31,12 @@ const HomePage = () => {
               {currentUser ? (
                 <>
                   <h5 className="mb-3">Welcome back, {currentUser.name}!</h5>
+
+                  {/* RequestBar for Medical Requests */}
+                  <div className="mb-3">
+                    <RequestBar variant="default" />
+                  </div>
+
                   <div className="d-grid gap-2">
                     <Link to="/appointments" className="btn btn-outline-primary btn-sm">
                       <i className="fas fa-calendar-plus me-2"></i> Book Appointment

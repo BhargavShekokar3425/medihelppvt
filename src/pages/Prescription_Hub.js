@@ -1,11 +1,14 @@
 import { Link } from "react-router-dom";  // Import Link from React Router
-import Help from "../components/Help"; 
+import Help from "../components/Help";
+import { useBackendContext } from '../contexts/BackendContext';
 
 function PrescriptionMain(){
+    const { currentUser } = useBackendContext();
+
     return(
         <div>
         <div className="container">
-          
+
        <div className="jumbotron gradient-background p-4 p-md-5 text-white rounded bg-dark" style={{marginBottom: "32px"}} >
         <div className="col-md-6 px-0 " style={{color: "black"}}>
           <h1 className="display-4 font-italic" >Prescription Hub&apos;s Dashboard</h1>
@@ -15,8 +18,23 @@ function PrescriptionMain(){
         </div>
       </div>
 
-      
-    
+      {/* Quick Access Info for logged-in users */}
+      {currentUser && (
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="alert alert-info d-flex align-items-center" role="alert">
+              <span style={{fontSize: '20px', marginRight: '12px'}}>💡</span>
+              <div>
+                <strong>Quick Tip:</strong> Access the medical request bar directly from your respective page below.
+                Select the appropriate option based on your role.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
       <div className="row mb-2" >
         <div className="col-md-6" >
           <div className="hover-card row g-0 border rounded overflow-hidden flex-md-row mb-4 shadow-sm h-md-250 position-relative custom-card" style={{backgroundColor: "rgb(243, 243, 243)"}}  > 

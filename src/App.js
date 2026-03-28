@@ -14,6 +14,9 @@ import DocAnswers from "./pages/DocAnswers";
 import CommunityForums from "./pages/CommunityForums";
 import HomePage from "./pages/HomePage";
 import AuthWrapper from "./components/AuthWrapper";
+import MedicineRequestPortal from "./pages/MedicineRequestPortal";
+import PatientDirectory from "./pages/PatientDirectory";
+import PatientPrescription from "./pages/PatientPrescription";
 
 import NavBar from "./components/NavBar"; 
 import Header from "./components/Header"; 
@@ -87,7 +90,22 @@ function App() {
               <UserProfile />
             </AuthWrapper>
           } />
-          
+          <Route path="/medicine-request" element={
+            <AuthWrapper requiredRole="patient">
+              <MedicineRequestPortal />
+            </AuthWrapper>
+          } />
+          <Route path="/patient-directory" element={
+            <AuthWrapper requiredRole="doctor">
+              <PatientDirectory />
+            </AuthWrapper>
+          } />
+          <Route path="/patient-prescription" element={
+            <AuthWrapper requiredRole="patient">
+              <PatientPrescription />
+            </AuthWrapper>
+          } />
+
           {/* Fallback for unknown routes */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -58,6 +58,10 @@
 | **Emergency SOS** | One-tap emergency with geolocation, nearby hospital routing, email/SMS notifications |
 | **Real-time Chat** | Socket.io messaging with WhatsApp-style read receipts (sent/delivered/read), typing indicators, online status, message pagination |
 | **Prescription Hub** | Digital prescriptions — doctors create, patients view and download |
+| **Medicine Request Portal** | Patients can upload prescriptions or request doctor verification for medicines |
+| **Access Request System** | Doctors can request access to patient medical records; patients review and approve/deny via notification dialogs |
+| **Role-Based Access Control** | Smart dialogs redirect users to correct pages based on their role (doctor/patient) |
+| **Patient Directory** | Doctors can browse and search patient directory, send access requests |
 | **Community Forums** | Medical Q&A forums with doctor-verified answers |
 | **Reviews & Ratings** | Patients rate and review doctors; aggregated ratings on profiles |
 | **Hospital Directory** | Browse hospitals by location with services, contact info, and maps |
@@ -85,7 +89,13 @@
 medihelppvt/
 ├── src/                    # React frontend
 │   ├── components/         # Reusable UI components
+│   │   └── RequestBar.js   # Role-based request navigation
 │   ├── pages/              # Route-level page components
+│   │   ├── PresPatients.js # Patient prescriptions with access request notifications
+│   │   ├── PresDoctors.js  # Doctor prescription creation with patient directory
+│   │   ├── MedicineRequestPortal.js  # Medicine request form
+│   │   ├── PatientDirectory.js       # Doctor's patient browser
+│   │   └── PatientPrescription.js    # Patient prescription requests
 │   ├── contexts/           # React Context providers (Auth, Backend)
 │   ├── hooks/              # Custom hooks (useBackendState)
 │   ├── services/           # API service layer (Axios)
@@ -94,11 +104,18 @@ medihelppvt/
 ├── backend/                # Express API server
 │   ├── controllers/        # Request handlers
 │   ├── models/             # Mongoose schemas
+│   │   ├── AccessRequest.model.js    # Doctor-patient access requests
+│   │   ├── MedicineRequest.model.js  # Patient medicine requests
+│   │   └── Prescription.model.js     # Digital prescriptions
 │   ├── routes/             # API route definitions
+│   │   ├── accessRequest.routes.js   # Access request endpoints
+│   │   └── medicineRequest.routes.js # Medicine request endpoints
 │   ├── middleware/         # Auth & error middleware
 │   ├── services/           # Business logic
+│   │   └── pdfService.js   # PDF generation for prescriptions
 │   ├── socket/             # Socket.io handlers
 │   └── uploads/            # User-uploaded files
+│       └── prescriptions/  # Uploaded prescription images/PDFs
 │
 ├── public/                 # Static assets
 └── docs/                   # Documentation & screenshots
@@ -254,6 +271,22 @@ npm run dev
 | `POST` | `/api/reviews` | Submit a review |
 | `GET` | `/api/reviews/:doctorId` | Get doctor reviews |
 | `GET` | `/api/health` | System health check |
+
+### Access Requests (Doctor ↔ Patient Data Sharing)
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/access-requests` | Doctor sends access request to patient |
+| `GET` | `/api/access-requests` | Get access requests (role-filtered) |
+| `PUT` | `/api/access-requests/:id/respond` | Patient approves/denies request |
+| `GET` | `/api/access-requests/pending` | Get pending requests count |
+
+### Medicine Requests
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/medicine-requests` | Patient submits medicine request (with file upload) |
+| `GET` | `/api/medicine-requests` | List medicine requests (role-filtered) |
+| `PUT` | `/api/medicine-requests/:id/verify` | Doctor verifies/approves medicine request |
+| `GET` | `/api/medicine-requests/:id` | Get single request details |
 
 ---
 
